@@ -1,0 +1,15 @@
+[package]
+name = "microll"
+version = "0.1.0"
+authors = ["Tom Hightower <tom.hightower356@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+glium = { version = "0.25", default-features = true } # same as in imgui master branch
+imgui = { git = "https://github.com/Gekkio/imgui-rs" }
+imgui-glium-renderer = { git = "https://github.com/Gekkio/imgui-rs" }
+imgui-winit-support = { git = "https://github.com/Gekkio/imgui-rs" }
+clipboard = "0.5"
+image = "0.21"
