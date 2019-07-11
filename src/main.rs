@@ -25,12 +25,18 @@ fn show_main_app(ui: &Ui, state: &mut State, _opened: &mut bool, dimensions: (u3
 
 fn show_main_app_window(ui: &Ui, _state: &mut State, dimensions: (u32, u32)) {
     ui.window(im_str!("Main"))
+        .position([0.0, 15.0], Condition::Always)
+        .title_bar(false)
+        .resizable(false)
+        .movable(false)
+        .collapsible(false)
+        .no_bring_to_front_on_focus(true)
         .size(
-            [dimensions.0 as f32, dimensions.1 as f32],
+            [dimensions.0 as f32, (dimensions.1 as f32) - 15.0],
             Condition::Always,
         )
         .build(|| {
-            ui.text(im_str!("sample text"));
+            ui.text(im_str!("Here: Have some sample text!"));
         });
 }
 
