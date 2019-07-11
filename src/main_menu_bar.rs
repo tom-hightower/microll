@@ -1,7 +1,7 @@
 use imgui::*;
 
-use crate::structs::State;
 use crate::structs::FileMenuState;
+use crate::structs::State;
 
 pub fn show_app_main_menu_bar<'a>(ui: &Ui<'a>, state: &mut State) {
     ui.main_menu_bar(|| {
