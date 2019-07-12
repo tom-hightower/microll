@@ -36,7 +36,7 @@ fn show_main_app_window(ui: &Ui, _state: &mut State, dimensions: (u32, u32)) {
             Condition::Always,
         )
         .build(|| {
-            ui.text(im_str!("Here: Have some sample text!"));
+            ui.text(im_str!("Current frame dimensions: {:?}", dimensions));
         });
 }
 

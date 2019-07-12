@@ -7,7 +7,8 @@ use std::time::Instant;
 
 mod clipboard;
 
-// TODO: Consider visibility of System struct members
+// TODO: Consider visibility of System struct members; rather than making them public.
+// consider adding specific accessor methods w/ proper error handling
 
 pub struct System {
     pub events_loop: glutin::EventsLoop,
