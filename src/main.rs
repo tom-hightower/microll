@@ -9,9 +9,9 @@ use structs::State;
 
 fn main() {
     let mut state = State::default();
-    let system = support::init(file!());
-    let dimensions: (u32, u32) = system.display.get_framebuffer_dimensions();
-    system.main_loop(|run, ui| {
+    let mut system = support::init(file!());
+    // Change capture to pass dimension as captured variable
+    system.main_loop(|run, ui, dimensions| {
         show_main_app(ui, &mut state, run, dimensions);
         show_test_window(ui);
     });
@@ -37,6 +37,7 @@ fn show_main_app_window(ui: &Ui, state: &mut State, dimensions: (u32, u32)) {
             Condition::Always,
         )
         .build(|| {
+            ui.text(im_str!("Current frame dimensions: {:?}", dimensions));
             ui.text(im_str!("{:?}", state.main_body_text));
         });
 }

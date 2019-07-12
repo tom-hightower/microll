@@ -7,6 +7,9 @@ use std::time::Instant;
 
 mod clipboard;
 
+// TODO: Consider visibility of System struct members; rather than making them public.
+// consider adding specific accessor methods w/ proper error handling
+
 pub struct System {
     pub events_loop: glutin::EventsLoop,
     pub display: glium::Display,
@@ -16,6 +19,7 @@ pub struct System {
     pub font_size: f32,
 }
 
+// TODO: Functions like this generally wrap `System` in a Result<T,E> for proper error-handling
 pub fn init(title: &str) -> System {
     let title = match title.rfind('/') {
         Some(idx) => title.split_at(idx + 1).1,
@@ -80,16 +84,17 @@ pub fn init(title: &str) -> System {
 }
 
 impl System {
-    pub fn main_loop<F: FnMut(&mut bool, &mut Ui)>(self, mut run_ui: F) {
-        let System {
-            mut events_loop,
-            display,
-            mut imgui,
-            mut platform,
-            mut renderer,
-            ..
-        } = self;
-        let gl_window = display.gl_window();
+
+    // main_loop will mutate System object calling it
+    // modify mutably captured close `FnMut` to take 2-tuple of u32, representing dimension
+    pub fn main_loop<F: FnMut(&mut bool, &mut Ui, (u32, u32))>(&mut self, mut run_ui: F) {
+        
+        let events_loop = &mut self.events_loop;
+        let imgui = &mut self.imgui;
+        let platform = &mut self.platform;
+        let renderer = &mut self.renderer;
+        
+        let gl_window = self.display.gl_window();
         let window = gl_window.window();
         let mut last_frame = Instant::now();
         let mut run = true;
@@ -97,7 +102,6 @@ impl System {
         while run {
             events_loop.poll_events(|event| {
                 platform.handle_event(imgui.io_mut(), &window, &event);
-
                 if let Event::WindowEvent { event, .. } = event {
                     if let WindowEvent::CloseRequested = event {
                         run = false;
@@ -111,9 +115,10 @@ impl System {
                 .expect("Failed to start frame");
             last_frame = io.update_delta_time(last_frame);
             let mut ui = imgui.frame();
-            run_ui(&mut run, &mut ui);
-
-            let mut target = display.draw();
+            
+            // Pass dimension here
+            run_ui(&mut run, &mut ui, self.display.get_framebuffer_dimensions());
+            let mut target = self.display.draw();
             target.clear_color_srgb(1.0, 1.0, 1.0, 1.0);
             platform.prepare_render(&ui, &window);
             let draw_data = ui.render();
