@@ -13,3 +13,5 @@ imgui-glium-renderer = { git = "https://github.com/Gekkio/imgui-rs" }
 imgui-winit-support = { git = "https://github.com/Gekkio/imgui-rs" }
 clipboard = "0.5"
 image = "0.21"
+reqwest = "0.9"
+serde = "1.0"
