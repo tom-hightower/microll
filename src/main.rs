@@ -1,5 +1,6 @@
 use imgui::*;
 
+mod http;
 mod main_menu_bar;
 mod structs;
 mod support;
@@ -23,7 +24,7 @@ fn show_main_app(ui: &Ui, state: &mut State, _opened: &mut bool, dimensions: (u3
     }
 }
 
-fn show_main_app_window(ui: &Ui, _state: &mut State, dimensions: (u32, u32)) {
+fn show_main_app_window(ui: &Ui, state: &mut State, dimensions: (u32, u32)) {
     ui.window(im_str!("Main"))
         .position([0.0, 15.0], Condition::Always)
         .title_bar(false)
@@ -37,6 +38,7 @@ fn show_main_app_window(ui: &Ui, _state: &mut State, dimensions: (u32, u32)) {
         )
         .build(|| {
             ui.text(im_str!("Current frame dimensions: {:?}", dimensions));
+            ui.text(im_str!("{:?}", state.main_body_text));
         });
 }
 

@@ -1,6 +1,7 @@
 pub struct State {
     pub show_app_main_menu_bar: bool,
     pub file_menu: FileMenuState,
+    pub main_body_text: String,
 }
 
 impl Default for State {
@@ -8,6 +9,7 @@ impl Default for State {
         State {
             show_app_main_menu_bar: true,
             file_menu: Default::default(),
+            main_body_text: String::from("Here: Have some sample text!"),
         }
     }
 }
