@@ -13,7 +13,7 @@ fn main() {
     // Change capture to pass dimension as captured variable
     system.main_loop(|run, ui, dimensions| {
         show_main_app(ui, &mut state, run, dimensions);
-        show_test_window(ui);
+        //show_test_window(ui);
     });
 }
 
@@ -38,7 +38,19 @@ fn show_main_app_window(ui: &Ui, state: &mut State, dimensions: (u32, u32)) {
         )
         .build(|| {
             ui.text(im_str!("Current frame dimensions: {:?}", dimensions));
-            ui.text(im_str!("{:?}", state.main_body_text));
+            ui.text_wrapped(&im_str!("{:?}", state.main_body_text));
+            ui.text(im_str!("Press the green square to pull sample html:"));
+            if ui
+                .color_button(im_str!("Green color"), [0.0, 1.0, 0.0, 1.0])
+                .size([100.0, 50.0])
+                .build()
+            {
+                state.main_body_text = http::get_text(
+                    "https://www.york.ac.uk/teaching/cws/wws/webpage1.html".to_string(),
+                )
+                .unwrap();
+                println!("{:?}", state.main_body_text);
+            }
         });
 }
 
