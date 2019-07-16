@@ -2,6 +2,7 @@ pub struct State {
     pub show_app_main_menu_bar: bool,
     pub file_menu: FileMenuState,
     pub main_body_text: String,
+    pub url_to_get: String,
 }
 
 impl Default for State {
@@ -10,6 +11,7 @@ impl Default for State {
             show_app_main_menu_bar: true,
             file_menu: Default::default(),
             main_body_text: String::from("Here: Have some sample text!"),
+            url_to_get: String::from("https://www.york.ac.uk/teaching/cws/wws/webpage1.html"),
         }
     }
 }

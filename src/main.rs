@@ -45,10 +45,7 @@ fn show_main_app_window(ui: &Ui, state: &mut State, dimensions: (u32, u32)) {
                 .size([100.0, 50.0])
                 .build()
             {
-                state.main_body_text = http::get_text(
-                    "https://www.york.ac.uk/teaching/cws/wws/webpage1.html".to_string(),
-                )
-                .unwrap();
+                state.main_body_text = http::get_text(&state.url_to_get).unwrap();
                 println!("{:?}", state.main_body_text);
             }
         });
