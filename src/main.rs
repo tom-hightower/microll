@@ -1,6 +1,7 @@
 use imgui::*;
 
 mod http;
+mod html;
 mod main_menu_bar;
 mod structs;
 mod support;
@@ -45,7 +46,9 @@ fn show_main_app_window(ui: &Ui, state: &mut State, dimensions: (u32, u32)) {
                 .size([100.0, 50.0])
                 .build()
             {
-                state.main_body_text = http::get_text(&state.url_to_get).unwrap();
+                let html_text = http::get_text(&state.url_to_get).unwrap();
+                let parser = html::parse_html(&html_text);
+                state.main_body_text = html::get_elements(parser, "p")[0].clone();
                 println!("{:?}", state.main_body_text);
             }
         });
