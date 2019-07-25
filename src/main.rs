@@ -1,7 +1,7 @@
 use imgui::*;
 
-mod http;
 mod html;
+mod http;
 mod main_menu_bar;
 mod structs;
 mod support;
