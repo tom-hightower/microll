@@ -1,8 +1,11 @@
+use imgui::ImString;
+
 pub struct State {
     pub show_app_main_menu_bar: bool,
     pub file_menu: FileMenuState,
-    pub main_body_text: String,
-    pub url_to_get: String,
+    pub url_to_get: ImString,
+    pub main_body_array: Vec<String>,
+    pub sub_windows: SubWindowVisibility,
 }
 
 impl Default for State {
@@ -10,8 +13,9 @@ impl Default for State {
         State {
             show_app_main_menu_bar: true,
             file_menu: Default::default(),
-            main_body_text: String::from("Here: Have some sample text!"),
-            url_to_get: String::from("https://www.york.ac.uk/teaching/cws/wws/webpage1.html"),
+            url_to_get: ImString::new("https://www.york.ac.uk/teaching/cws/wws/webpage1.html"),
+            main_body_array: vec![String::from("Test")],
+            sub_windows: Default::default(),
         }
     }
 }
@@ -26,6 +30,18 @@ impl Default for FileMenuState {
         FileMenuState {
             test_enabled: true,
             can_search: true,
+        }
+    }
+}
+
+pub struct SubWindowVisibility {
+    pub go_to_link: bool,
+}
+
+impl Default for SubWindowVisibility {
+    fn default() -> Self {
+        SubWindowVisibility {
+            go_to_link: false,
         }
     }
 }

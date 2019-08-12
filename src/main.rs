@@ -14,6 +14,9 @@ fn main() {
     // Change capture to pass dimension as captured variable
     system.main_loop(|run, ui, dimensions| {
         show_main_app(ui, &mut state, run, dimensions);
+        if state.sub_windows.go_to_link {
+            show_go_url_window(ui, &mut state);
+        }
         //show_test_window(ui);
     });
 }
@@ -39,33 +42,29 @@ fn show_main_app_window(ui: &Ui, state: &mut State, dimensions: (u32, u32)) {
         )
         .build(|| {
             ui.text(im_str!("Current frame dimensions: {:?}", dimensions));
-            ui.text_wrapped(&im_str!("{:?}", state.main_body_text));
             ui.text(im_str!("Press the green square to pull sample html:"));
             if ui
                 .color_button(im_str!("Green color"), [0.0, 1.0, 0.0, 1.0])
-                .size([100.0, 50.0])
+                .size([50.0, 50.0])
                 .build()
             {
-                let html_text = http::get_text(&state.url_to_get).unwrap();
+                let html_text = http::get_text(&String::from(state.url_to_get.to_str().to_owned())).unwrap();
                 let parser = html::parse_html(&html_text);
-                state.main_body_text = html::get_elements(parser, "p")[0].clone();
-                println!("{:?}", state.main_body_text);
+                state.main_body_array = html::traverse_document(parser);
+            }
+            for x in state.main_body_array.iter() {
+                ui.text_wrapped(&im_str!("{}", x));
             }
         });
 }
 
-fn show_test_window(ui: &Ui) {
-    ui.window(im_str!("Microll"))
+fn show_go_url_window(ui: &Ui, state: &mut State) {
+    ui.window(im_str!("Go To URL..."))
         .size([0.0, 0.0], Condition::FirstUseEver)
+        .always_auto_resize(true)
         .build(|| {
-            ui.text(im_str!("Hello, world!"));
-            ui.text(im_str!("Example program:"));
-            ui.text(im_str!("Microll by Tom Hightower"));
-            ui.separator();
-            let mouse_pos = ui.io().mouse_pos;
-            ui.text(format!(
-                "Mouse Position: ({:.1},{:.1})",
-                mouse_pos[0], mouse_pos[1]
-            ));
+            ui.input_text(im_str!("Go To URL"), &mut state.url_to_get)
+                .enter_returns_true(true)
+                .build();
         });
 }

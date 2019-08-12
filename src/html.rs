@@ -5,6 +5,15 @@ pub fn parse_html(html: &String) -> scraper::Html {
     return document;
 }
 
+pub fn traverse_document(document: scraper::Html) -> Vec<String> {
+    let mut elements : Vec<String> = Vec::new();
+    for el in document.root_element().text() {
+        elements.push(String::from(el));
+    }
+    return elements;
+}
+
+/*
 pub fn get_elements(document: scraper::Html, key: &str) -> Vec<String> {
     let selector = Selector::parse(key).unwrap();
     let mut elements = Vec::new();
@@ -13,3 +22,4 @@ pub fn get_elements(document: scraper::Html, key: &str) -> Vec<String> {
     }
     return elements;
 }
+*/
