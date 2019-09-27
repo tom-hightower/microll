@@ -10,6 +10,7 @@ pub fn traverse_document(document: scraper::Html) -> Vec<String> {
     for el in document.root_element().text() {
         elements.push(String::from(el));
     }
+
     return elements;
 }
 
