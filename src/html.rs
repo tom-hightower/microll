@@ -29,8 +29,8 @@ struct ParseNode {
     tag: HTMLToken,
     attributes: HashMap<String, String>,
     text: Vec<u8>,
-    startInd: u32,
-    endInd: u32,
+    startInd: usize,
+    endInd: usize,
 }
 
 impl ParseNode {
@@ -49,14 +49,15 @@ impl ParseNode {
 fn larse(input: &String) -> Result<Vec<ParseNode>, String> {
     let mut result = Vec::new();
     let input_u8 = input.as_bytes();
-    for (mut i, ch) in input.chars().enumerate() {
-        match ch {
+    let mut i = 0;
+    'outer: while i < input_u8.len() {
+        match input_u8[i] as char {
             '<' => {
                 match input_u8[i + 1] as char {
                     'A'..='Z' | 'a'..='z' | '!' => {
-                        let mut tag = String::new();
-                        let mut x = i + 1;
-                        let start: u32 = i as u32;
+                        let mut tag: String = String::new();
+                        let mut x: usize = i + 1;
+                        let start: usize = i;
                         while (input_u8[x] != ' ' as u8) && (input_u8[x] != '>' as u8) {
                             tag.push(input_u8[x] as char);
                             x += 1;
@@ -67,9 +68,9 @@ fn larse(input: &String) -> Result<Vec<ParseNode>, String> {
                             && (html_tag != HTMLToken::Unknown)
                             && (html_tag != HTMLToken::Comment)
                         {
-                            let mut attr_name = String::new();
-                            let mut attr_val = String::new();
-                            let mut is_name = true;
+                            let mut attr_name: String = String::new();
+                            let mut attr_val: String = String::new();
+                            let mut is_name: bool = true;
                             x += 1;
                             while input_u8[x] != '>' as u8
                                 || (input_u8[x] as char == '/' && input_u8[x + 1] as char == '>')
@@ -109,7 +110,7 @@ fn larse(input: &String) -> Result<Vec<ParseNode>, String> {
                             // self closing tag
                             let mut node = ParseNode::new();
                             node.startInd = start;
-                            node.endInd = (x + 1) as u32;
+                            node.endInd = x + 1;
                             node.tag = html_tag;
                             node.attributes = attributes;
                             result.push(node);
@@ -141,7 +142,7 @@ fn larse(input: &String) -> Result<Vec<ParseNode>, String> {
                             // No closing tag, cannot have children
                             let mut node = ParseNode::new();
                             node.startInd = start;
-                            node.endInd = x as u32;
+                            node.endInd = x;
                             node.tag = html_tag;
                             node.attributes = attributes;
                             result.push(node);
@@ -161,23 +162,42 @@ fn larse(input: &String) -> Result<Vec<ParseNode>, String> {
                                 if input_u8[x] as char != '<' {
                                     text.push(input_u8[x]);
                                 } else {
-                                    //TODO: recurse
+                                    let new_children = larse(&String::from_utf8(input_u8[x..].to_vec()).unwrap()).unwrap();
+                                    for child in new_children {
+                                        children.push(child);
+                                    }
+                                    x = children[children.len()].endInd;
                                 }
                                 x += 1;
-                                //TODO: create and add node
                             }
+                            //TODO: create and add node
+                            let mut node = ParseNode::new();
+                            node.startInd = start;
+                            while input_u8[x] as char != '>' {
+                                x += 1
+                            }
+                            node.endInd = x;
+                            node.tag = html_tag;
+                            node.attributes = attributes;
+                            node.children = children;
+                            node.text = text;
+                            result.push(node);
+                            i = x
                         }
                     }
                     '/' => {
-                        //error this shouldn't be a closing tag
+                        //reached the end of nested segment probably
+                        break 'outer;
                     }
                     _ => {
                         // shouldn't be here
+                        break 'outer;
                     }
                 }
             }
             _ => {}
         }
+        i += 1;
     }
     Ok(result)
 }
