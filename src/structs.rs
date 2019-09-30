@@ -13,7 +13,7 @@ impl Default for State {
         State {
             show_app_main_menu_bar: true,
             file_menu: Default::default(),
-            url_to_get: ImString::new("https://www.york.ac.uk/teaching/cws/wws/webpage1.html"),
+            url_to_get: ImString::new("https://adriann.github.io/rust_parser.html"),
             main_body_array: vec![String::from("Test")],
             sub_windows: Default::default(),
         }
