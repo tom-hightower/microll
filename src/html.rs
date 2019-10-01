@@ -1,5 +1,6 @@
 use scraper::Html;
 use std::collections::HashMap;
+use std::str;
 
 #[derive(PartialEq, Debug)]
 enum HTMLToken {
@@ -47,20 +48,19 @@ impl ParseNode {
     }
 }
 
-fn larse(input: &String) -> Result<Vec<ParseNode>, String> {
+fn larse(input_u8: Vec<u8>, start:usize) -> Result<Vec<ParseNode>, String> {
     let mut result = Vec::new();
-    let input_u8 = input.as_bytes();
-    let mut i = 0;
+    let mut i = start;
     'outer: while i < input_u8.len() {
         match input_u8[i] as char {
             '<' => {
                 match input_u8[i + 1] as char {
                     'A'..='Z' | 'a'..='z' | '!' => {
-                        let mut tag: String = String::new();
+                        let mut tag: Vec<u8> = Vec::<u8>::new();
                         let mut x: usize = i + 1;
                         let start: usize = i;
                         while (input_u8[x] != ' ' as u8) && (input_u8[x] != '>' as u8) {
-                            tag.push(input_u8[x] as char);
+                            tag.push(input_u8[x]);
                             x += 1;
                         }
                         let html_tag = match_tag(tag.clone());
@@ -77,8 +77,8 @@ fn larse(input: &String) -> Result<Vec<ParseNode>, String> {
                             x += 1;
                             while x < input_u8.len()
                                 && (input_u8[x] as char != '>'
-                                    && (input_u8[x] as char != '/'
-                                        && input_u8[x + 1] as char != '>'))
+                                    && !(input_u8[x] as char == '/'
+                                        && input_u8[x + 1] as char == '>'))
                             {
                                 match input_u8[x] as char {
                                     '=' => is_name = !is_name,
@@ -127,14 +127,10 @@ fn larse(input: &String) -> Result<Vec<ParseNode>, String> {
                                 result.push(node);
                                 i = x + 2;
                             } else if html_tag == HTMLToken::Unknown {
-                                while (input_u8[x] as char != '<')
-                                    && (input_u8[x + 1] as char != '/')
-                                    && ((String::from_utf8(
-                                        input_u8[x + 2..x + tag.len()].to_vec(),
-                                    )
-                                    .unwrap()
-                                    .to_uppercase())
-                                        != tag.to_uppercase())
+                                while !((input_u8[x] as char == '<')
+                                    && (input_u8[x + 1] as char == '/')
+                                    && (input_u8[x + 2..x + 2 + tag.len()].to_ascii_uppercase()
+                                        == tag.to_ascii_uppercase()))
                                 {
                                     x += 1;
                                 }
@@ -169,25 +165,18 @@ fn larse(input: &String) -> Result<Vec<ParseNode>, String> {
                                 // TODO: need to check on this check
                                 while !(input_u8[x] as char == '<'
                                     && input_u8[x + 1] as char == '/'
-                                    && ((String::from_utf8(
-                                        input_u8[x + 2..x + tag.len()].to_vec(),
-                                    )
-                                    .unwrap()
-                                    .to_uppercase())
-                                        == tag.to_uppercase()))
+                                    && (input_u8[x + 2..x + 2 + tag.len()].to_ascii_uppercase()
+                                        == tag.to_ascii_uppercase()))
                                 {
                                     if input_u8[x] as char != '<' {
                                         text.push(input_u8[x]);
                                     } else {
-                                        let new_children = larse(
-                                            &String::from_utf8(input_u8[x..].to_vec()).unwrap(),
-                                        )
-                                        .unwrap();
+                                        let new_children = larse(input_u8.clone(), x).unwrap();
                                         for child in new_children {
                                             children.push(child);
                                         }
                                         if children.len() != 0 {
-                                            x = children[children.len()-1].end_ind;
+                                            x = children[children.len() - 1].end_ind;
                                         }
                                     }
                                     x += 1;
@@ -234,8 +223,12 @@ fn larse(input: &String) -> Result<Vec<ParseNode>, String> {
     Ok(result)
 }
 
-fn match_tag(tag: String) -> HTMLToken {
-    match tag.to_uppercase().as_str() {
+fn match_tag(tag: Vec<u8>) -> HTMLToken {
+    let tag_str = match str::from_utf8(&tag) {
+        Ok(v) => v,
+        Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
+    };
+    match tag_str.to_uppercase().as_str() {
         "HTML" => return HTMLToken::HtmlStart,
         "HEAD" => return HTMLToken::Head,
         "A" => return HTMLToken::HyperLink,
@@ -264,7 +257,9 @@ pub fn parse_html(html: &String) -> scraper::Html {
     root.tag = HTMLToken::ROOT;
     root.start_ind = 0;
     root.end_ind = html.len();
-    let result = larse(html).unwrap();
+    let html_vec = html.as_bytes().to_vec();
+
+    let result = larse(html_vec, 0).unwrap();
     for node in result {
         root.children.push(node);
     }
