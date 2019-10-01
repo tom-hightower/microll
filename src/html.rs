@@ -9,7 +9,7 @@ enum HTMLToken {
     HyperLink,     //a
     BoldText,      //b or strong
     Body,          //body
-    LineBreak,     //br
+    LineBreak,     //br, wbr, or hr
     DivSection,    //div
     Head,          //head
     Heading,       //heading
@@ -48,9 +48,9 @@ impl ParseNode {
     }
 }
 
-fn larse(input_u8: Vec<u8>, start:usize) -> Result<Vec<ParseNode>, String> {
+fn larse(input_u8: Vec<u8>, begin: usize) -> Result<Vec<ParseNode>, String> {
     let mut result = Vec::new();
-    let mut i = start;
+    let mut i = begin;
     'outer: while i < input_u8.len() {
         match input_u8[i] as char {
             '<' => {
@@ -59,7 +59,10 @@ fn larse(input_u8: Vec<u8>, start:usize) -> Result<Vec<ParseNode>, String> {
                         let mut tag: Vec<u8> = Vec::<u8>::new();
                         let mut x: usize = i + 1;
                         let start: usize = i;
-                        while (input_u8[x] != ' ' as u8) && (input_u8[x] != '>' as u8) {
+                        while (input_u8[x] != ' ' as u8)
+                            && (input_u8[x] != '>' as u8)
+                            && (input_u8[x] != '/' as u8)
+                        {
                             tag.push(input_u8[x]);
                             x += 1;
                         }
@@ -126,20 +129,10 @@ fn larse(input_u8: Vec<u8>, start:usize) -> Result<Vec<ParseNode>, String> {
                                 node.attributes = attributes;
                                 result.push(node);
                                 i = x + 2;
-                            } else if html_tag == HTMLToken::Unknown {
-                                while !((input_u8[x] as char == '<')
-                                    && (input_u8[x + 1] as char == '/')
-                                    && (input_u8[x + 2..x + 2 + tag.len()].to_ascii_uppercase()
-                                        == tag.to_ascii_uppercase()))
-                                {
-                                    x += 1;
-                                }
-                                x += 2 + tag.len();
-                                i = x + 1;
                             } else if html_tag == HTMLToken::Comment {
-                                while (input_u8[x] as char != '-')
-                                    && (input_u8[x + 1] as char != '-')
-                                    && (input_u8[x + 2] as char != '>')
+                                while !(input_u8[x] as char == '-'
+                                    && input_u8[x + 1] as char == '-'
+                                    && input_u8[x + 2] as char == '>')
                                 {
                                     x += 1;
                                 }
@@ -162,7 +155,6 @@ fn larse(input_u8: Vec<u8>, start:usize) -> Result<Vec<ParseNode>, String> {
                                 x += 1;
                                 let mut text = Vec::<u8>::new();
                                 let mut children = Vec::<ParseNode>::new();
-                                // TODO: need to check on this check
                                 while !(input_u8[x] as char == '<'
                                     && input_u8[x + 1] as char == '/'
                                     && (input_u8[x + 2..x + 2 + tag.len()].to_ascii_uppercase()
@@ -181,7 +173,6 @@ fn larse(input_u8: Vec<u8>, start:usize) -> Result<Vec<ParseNode>, String> {
                                     }
                                     x += 1;
                                 }
-                                //TODO: create and add node
                                 let mut node = ParseNode::new();
                                 node.start_ind = start;
                                 while input_u8[x] as char != '>' {
@@ -234,7 +225,7 @@ fn match_tag(tag: Vec<u8>) -> HTMLToken {
         "A" => return HTMLToken::HyperLink,
         "B" | "STRONG" => return HTMLToken::BoldText,
         "BODY" => return HTMLToken::Body,
-        "BR" | "WBR" => return HTMLToken::LineBreak,
+        "BR" | "WBR" | "HR" => return HTMLToken::LineBreak,
         "DIV" => return HTMLToken::DivSection,
         "H1" | "H2" | "H3" | "H4" | "H5" | "H6" => return HTMLToken::Heading,
         "I" | "EM" => return HTMLToken::ItalicText,
@@ -246,8 +237,8 @@ fn match_tag(tag: Vec<u8>) -> HTMLToken {
         "UL" => return HTMLToken::UnorderedList,
         "!--" => return HTMLToken::Comment,
         "!DOCTYPE" => return HTMLToken::DocType,
-        "AREA" | "BASE" | "COL" | "COMMAND" | "EMBED" | "HR" | "IMG" | "INPUT" | "KEYGEN"
-        | "LINK" | "META" | "PARAM" | "SOURCE" | "TRACK" => return HTMLToken::VOID,
+        "AREA" | "BASE" | "COL" | "COMMAND" | "EMBED" | "IMG" | "INPUT" | "KEYGEN" | "LINK"
+        | "META" | "PARAM" | "SOURCE" | "TRACK" => return HTMLToken::VOID,
         _ => return HTMLToken::Unknown,
     }
 }
