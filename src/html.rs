@@ -18,11 +18,13 @@ enum HTMLToken {
     ListItem,      //li
     OrderedList,   //ol
     Paragraph,     //p
+    Script,        //script
     Span,          //span
     PageTitle,     //title
     UnorderedList, //ul
     Comment,       //<!--***-->
     VOID,          // no closing tag
+    Text,          // Text-only
     Unknown,
 }
 
@@ -120,7 +122,7 @@ fn larse(input_u8: Vec<u8>, begin: usize) -> Result<Vec<ParseNode>, String> {
                             }
                         }
                         if x < input_u8.len() {
-                            if input_u8[x] as char == '/' {
+                            if input_u8[x] as char == '/' || html_tag == HTMLToken::VOID {
                                 // self closing tag
                                 let mut node = ParseNode::new();
                                 node.start_ind = start;
@@ -137,8 +139,7 @@ fn larse(input_u8: Vec<u8>, begin: usize) -> Result<Vec<ParseNode>, String> {
                                     x += 1;
                                 }
                                 i = x + 3;
-                            } else if html_tag == HTMLToken::DocType || html_tag == HTMLToken::VOID
-                            {
+                            } else if html_tag == HTMLToken::DocType {
                                 // No closing tag, skip
                                 i = x + 1
                             } else if html_tag == HTMLToken::LineBreak {
@@ -155,23 +156,42 @@ fn larse(input_u8: Vec<u8>, begin: usize) -> Result<Vec<ParseNode>, String> {
                                 x += 1;
                                 let mut text = Vec::<u8>::new();
                                 let mut children = Vec::<ParseNode>::new();
+                                let mut start_text: usize = x;
                                 while !(input_u8[x] as char == '<'
                                     && input_u8[x + 1] as char == '/'
                                     && (input_u8[x + 2..x + 2 + tag.len()].to_ascii_uppercase()
                                         == tag.to_ascii_uppercase()))
                                 {
-                                    if input_u8[x] as char != '<' {
+                                    if input_u8[x] as char != '<' || html_tag == HTMLToken::Script {
                                         text.push(input_u8[x]);
                                     } else {
+                                        if text != "".as_bytes().to_vec() {
+                                            let mut node = ParseNode::new();
+                                            node.start_ind = start_text;
+                                            node.end_ind = x - 1;
+                                            node.tag = HTMLToken::Text;
+                                            node.text = text;
+                                            children.push(node);
+                                            text = Vec::<u8>::new();
+                                        }
                                         let new_children = larse(input_u8.clone(), x).unwrap();
                                         for child in new_children {
                                             children.push(child);
                                         }
                                         if children.len() != 0 {
                                             x = children[children.len() - 1].end_ind;
+                                            start_text = x;
                                         }
                                     }
                                     x += 1;
+                                }
+                                if text != "".as_bytes().to_vec() {
+                                    let mut node = ParseNode::new();
+                                    node.start_ind = start_text;
+                                    node.end_ind = x - 1;
+                                    node.tag = HTMLToken::Text;
+                                    node.text = text;
+                                    children.push(node);
                                 }
                                 let mut node = ParseNode::new();
                                 node.start_ind = start;
@@ -182,7 +202,6 @@ fn larse(input_u8: Vec<u8>, begin: usize) -> Result<Vec<ParseNode>, String> {
                                 node.tag = html_tag;
                                 node.attributes = attributes;
                                 node.children = children;
-                                node.text = text;
                                 result.push(node);
                                 i = x
                             }
@@ -233,6 +252,7 @@ fn match_tag(tag: Vec<u8>) -> HTMLToken {
         "LI" => return HTMLToken::ListItem,
         "OL" => return HTMLToken::OrderedList,
         "P" => return HTMLToken::Paragraph,
+        "SCRIPT" => return HTMLToken::Script,
         "SPAN" => return HTMLToken::Span,
         "TITLE" => return HTMLToken::PageTitle,
         "UL" => return HTMLToken::UnorderedList,
@@ -260,7 +280,9 @@ pub fn parse_html(html: &String) -> Vec<Vec<u8>> {
 
 fn build_array(node: ParseNode, mut ret_vec: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
     for i in node.children {
-        if i.text != "".as_bytes() && i.tag != HTMLToken::Unknown {
+        if i.tag == HTMLToken::Text
+            && !(node.tag == HTMLToken::Unknown || node.tag == HTMLToken::Script)
+        {
             ret_vec.push(i.text.clone());
         }
         ret_vec = build_array(i, ret_vec);
