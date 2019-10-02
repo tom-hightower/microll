@@ -4,7 +4,7 @@ pub struct State {
     pub show_app_main_menu_bar: bool,
     pub file_menu: FileMenuState,
     pub url_to_get: ImString,
-    pub main_body_array: Vec<String>,
+    pub main_body_array: Vec<Vec<u8>>,
     pub sub_windows: SubWindowVisibility,
 }
 
@@ -14,7 +14,7 @@ impl Default for State {
             show_app_main_menu_bar: true,
             file_menu: Default::default(),
             url_to_get: ImString::new("https://adriann.github.io/rust_parser.html"),
-            main_body_array: vec![String::from("Test")],
+            main_body_array: vec![String::from("Test").as_bytes().to_vec()],
             sub_windows: Default::default(),
         }
     }

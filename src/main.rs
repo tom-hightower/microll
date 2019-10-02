@@ -48,12 +48,15 @@ fn show_main_app_window(ui: &Ui, state: &mut State, dimensions: (u32, u32)) {
                 .build(ui)
             {
                 let html_text = http::get_text(&String::from(state.url_to_get.to_str().to_owned())).unwrap();
-                let parser = html::parse_html(&html_text);
-                state.main_body_array = html::traverse_document(parser);
+                state.main_body_array = html::parse_html(&html_text);
             }
-            for x in state.main_body_array.iter() {
-                ui.text_wrapped(&im_str!("{}", x));
+            let mut print_str = String::new();
+            let mut i: usize = 0;
+            while i < state.main_body_array.len() {
+                print_str.push_str(&String::from_utf8(state.main_body_array[i].clone()).unwrap());
+                i += 1;
             }
+            ui.text_wrapped(&im_str!("{}", print_str));
         });
 }
 

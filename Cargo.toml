@@ -15,5 +15,3 @@ clipboard = "0.5"
 
 reqwest = "0.9"
 serde = "1.0"
-scraper = "0.10"
-select = "*"

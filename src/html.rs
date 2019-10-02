@@ -1,4 +1,3 @@
-use scraper::Html;
 use std::collections::HashMap;
 use std::str;
 
@@ -10,6 +9,7 @@ enum HTMLToken {
     BoldText,      //b or strong
     Body,          //body
     LineBreak,     //br, wbr, or hr
+    Code,          //code
     DivSection,    //div
     Head,          //head
     Heading,       //heading
@@ -226,6 +226,7 @@ fn match_tag(tag: Vec<u8>) -> HTMLToken {
         "B" | "STRONG" => return HTMLToken::BoldText,
         "BODY" => return HTMLToken::Body,
         "BR" | "WBR" | "HR" => return HTMLToken::LineBreak,
+        "CODE" => return HTMLToken::Code,
         "DIV" => return HTMLToken::DivSection,
         "H1" | "H2" | "H3" | "H4" | "H5" | "H6" => return HTMLToken::Heading,
         "I" | "EM" => return HTMLToken::ItalicText,
@@ -243,45 +244,26 @@ fn match_tag(tag: Vec<u8>) -> HTMLToken {
     }
 }
 
-pub fn parse_html(html: &String) -> scraper::Html {
+pub fn parse_html(html: &String) -> Vec<Vec<u8>> {
     let mut root = ParseNode::new();
     root.tag = HTMLToken::ROOT;
     root.start_ind = 0;
     root.end_ind = html.len();
     let html_vec = html.as_bytes().to_vec();
-
     let result = larse(html_vec, 0).unwrap();
     for node in result {
         root.children.push(node);
     }
-    print_nodes(root);
-    let document = Html::parse_document(html);
-    return document;
+    let elements: Vec<Vec<u8>> = build_array(root, Vec::new());
+    return elements;
 }
 
-fn print_nodes(node: ParseNode) {
+fn build_array(node: ParseNode, mut ret_vec: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
     for i in node.children {
-        println!("{:?}", i.tag);
-        print_nodes(i);
+        if i.text != "".as_bytes() && i.tag != HTMLToken::Unknown {
+            ret_vec.push(i.text.clone());
+        }
+        ret_vec = build_array(i, ret_vec);
     }
+    return ret_vec;
 }
-
-pub fn traverse_document(document: scraper::Html) -> Vec<String> {
-    let mut elements: Vec<String> = Vec::new();
-    for el in document.root_element().text() {
-        elements.push(String::from(el));
-    }
-
-    return elements;
-}
-
-/*
-pub fn get_elements(document: scraper::Html, key: &str) -> Vec<String> {
-    let selector = Selector::parse(key).unwrap();
-    let mut elements = Vec::new();
-    for item in document.select(&selector) {
-        elements.push(item.text().collect::<String>());
-    }
-    return elements;
-}
-*/
