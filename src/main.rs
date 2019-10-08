@@ -47,8 +47,7 @@ fn show_main_app_window(ui: &Ui, state: &mut State, dimensions: (u32, u32)) {
                 .size([50.0, 50.0])
                 .build(ui)
             {
-                let html_text = http::get_text(&String::from(state.url_to_get.to_str().to_owned())).unwrap();
-                state.main_body_array = html::parse_html(&html_text);
+                go_to_page(state);
             }
             //let mut print_str = String::new();
             let mut i: usize = 0;
@@ -66,8 +65,22 @@ fn show_go_url_window(ui: &Ui, state: &mut State) {
         .size([0.0, 0.0], Condition::FirstUseEver)
         .always_auto_resize(true)
         .build(ui, || {
-            ui.input_text(im_str!("Go To URL"), &mut state.url_to_get)
+            if ui
+                .input_text(im_str!(""), &mut state.url_to_get)
                 .enter_returns_true(true)
-                .build();
+                .build()
+            {
+                go_to_page(state);
+            }
+            ui.same_line(0.);
+            if ui.button(im_str!("Go!"), [50., ui.frame_height()]) {
+                go_to_page(state);
+            }
         });
+}
+
+fn go_to_page(state: &mut State) {
+    let html_text = http::get_text(&String::from(state.url_to_get.to_str().to_owned())).unwrap();
+    state.main_body_array = html::parse_html(&html_text);
+    state.sub_windows.go_to_link = false;
 }
