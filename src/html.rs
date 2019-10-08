@@ -96,6 +96,9 @@ fn larse(input_u8: Vec<u8>, begin: usize) -> Result<Vec<ParseNode>, String> {
                                 i = x + 3;
                             } else if html_tag == HTMLToken::DocType {
                                 // No closing tag, skip
+                                while !(input_u8[x] as char == '>') {
+                                    x += 1
+                                }
                                 i = x + 1
                             } else if html_tag == HTMLToken::LineBreak {
                                 // No closing tag, cannot have children
@@ -181,7 +184,10 @@ fn larse(input_u8: Vec<u8>, begin: usize) -> Result<Vec<ParseNode>, String> {
                     }
                 }
             }
-            _ => {}
+            '\n' | ' ' | '\t' | '\r' => {}
+            _ => {
+                break 'outer;
+            }
         }
         i += 1;
     }
@@ -276,6 +282,10 @@ fn build_array(
                     }
                     if i.end_ind < cur_state.link {
                         item.link = true;
+                        match i.attributes.get("href") {
+                            Some(link) => item.url = link.clone(),
+                            None => {}
+                        }
                     }
                     if i.end_ind < cur_state.code {
                         item.code = true;
