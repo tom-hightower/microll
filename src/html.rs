@@ -1,54 +1,9 @@
+use crate::structs::HTMLToken;
+use crate::structs::ParseNode;
+use crate::structs::RenderItem;
+use crate::structs::RenderState;
 use std::collections::HashMap;
 use std::str;
-
-#[derive(PartialEq, Debug)]
-enum HTMLToken {
-    ROOT,
-    DocType,       // !Doctype
-    HyperLink,     //a
-    BoldText,      //b or strong
-    Body,          //body
-    LineBreak,     //br, wbr, or hr
-    Code,          //code
-    DivSection,    //div
-    Head,          //head
-    Heading,       //heading
-    HtmlStart,     //html
-    ItalicText,    //i or em
-    ListItem,      //li
-    OrderedList,   //ol
-    Paragraph,     //p
-    Script,        //script
-    Span,          //span
-    PageTitle,     //title
-    UnorderedList, //ul
-    Comment,       //<!--***-->
-    VOID,          // no closing tag
-    Text,          // Text-only
-    Unknown,
-}
-
-struct ParseNode {
-    children: Vec<ParseNode>,
-    tag: HTMLToken,
-    attributes: HashMap<String, String>,
-    text: Vec<u8>,
-    start_ind: usize,
-    end_ind: usize,
-}
-
-impl ParseNode {
-    pub fn new() -> ParseNode {
-        ParseNode {
-            children: Vec::new(),
-            tag: HTMLToken::Unknown,
-            attributes: HashMap::new(),
-            text: Vec::new(),
-            start_ind: 0,
-            end_ind: 0,
-        }
-    }
-}
 
 fn larse(input_u8: Vec<u8>, begin: usize) -> Result<Vec<ParseNode>, String> {
     let mut result = Vec::new();
@@ -264,7 +219,7 @@ fn match_tag(tag: Vec<u8>) -> HTMLToken {
     }
 }
 
-pub fn parse_html(html: &String) -> Vec<Vec<u8>> {
+pub fn parse_html(html: &String) -> Vec<RenderItem> {
     let mut root = ParseNode::new();
     root.tag = HTMLToken::ROOT;
     root.start_ind = 0;
@@ -274,18 +229,72 @@ pub fn parse_html(html: &String) -> Vec<Vec<u8>> {
     for node in result {
         root.children.push(node);
     }
-    let elements: Vec<Vec<u8>> = build_array(root, Vec::new());
+    let cur_state = RenderState::new();
+    let elements: Vec<RenderItem> = build_array(root, Vec::new(), cur_state);
     return elements;
 }
 
-fn build_array(node: ParseNode, mut ret_vec: Vec<Vec<u8>>) -> Vec<Vec<u8>> {
+fn build_array(
+    node: ParseNode,
+    mut ret_vec: Vec<RenderItem>,
+    mut cur_state: RenderState,
+) -> Vec<RenderItem> {
     for i in node.children {
-        if i.tag == HTMLToken::Text
-            && !(node.tag == HTMLToken::Unknown || node.tag == HTMLToken::Script)
-        {
-            ret_vec.push(i.text.clone());
+        match i.tag {
+            HTMLToken::BoldText => {
+                cur_state.bold = i.end_ind;
+            }
+            HTMLToken::HyperLink => {
+                cur_state.link = i.end_ind;
+            }
+            HTMLToken::LineBreak => {
+                let mut break_item = RenderItem::new();
+                break_item.line_break = true;
+                ret_vec.push(break_item);
+            }
+            HTMLToken::Code => {
+                cur_state.code = i.end_ind;
+            }
+            HTMLToken::ItalicText => {
+                cur_state.italics = i.end_ind;
+            }
+            HTMLToken::PageTitle => {
+                cur_state.title = i.end_ind;
+            }
+            HTMLToken::Heading => {
+                cur_state.heading = i.end_ind;
+            }
+            HTMLToken::Text => {
+                if !(node.tag == HTMLToken::Unknown || node.tag == HTMLToken::Script) {
+                    let mut item = RenderItem::new();
+                    let text = String::from_utf8(i.text.clone());
+                    if text.is_ok() {
+                        item.text = text.unwrap();
+                    }
+                    if i.end_ind < cur_state.bold {
+                        item.bold = true;
+                    }
+                    if i.end_ind < cur_state.link {
+                        item.link = true;
+                    }
+                    if i.end_ind < cur_state.code {
+                        item.code = true;
+                    }
+                    if i.end_ind < cur_state.italics {
+                        item.italics = true;
+                    }
+                    if i.end_ind < cur_state.title {
+                        item.title = true;
+                    }
+                    if i.end_ind < cur_state.heading {
+                        item.heading = true;
+                    }
+                    ret_vec.push(item);
+                }
+            }
+            _ => {}
         }
-        ret_vec = build_array(i, ret_vec);
+        ret_vec = build_array(i, ret_vec, cur_state.clone());
     }
     return ret_vec;
 }

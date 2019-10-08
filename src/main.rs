@@ -50,13 +50,14 @@ fn show_main_app_window(ui: &Ui, state: &mut State, dimensions: (u32, u32)) {
                 let html_text = http::get_text(&String::from(state.url_to_get.to_str().to_owned())).unwrap();
                 state.main_body_array = html::parse_html(&html_text);
             }
-            let mut print_str = String::new();
+            //let mut print_str = String::new();
             let mut i: usize = 0;
             while i < state.main_body_array.len() {
-                print_str.push_str(&String::from_utf8(state.main_body_array[i].clone()).unwrap());
+                //print_str.push_str(&String::from_utf8(state.main_body_array[i].clone()).unwrap());
+                ui.text_wrapped(&im_str!("{}", &state.main_body_array[i].text));
                 i += 1;
             }
-            ui.text_wrapped(&im_str!("{}", print_str));
+            //ui.text_wrapped(&im_str!("{}", print_str));
         });
 }
 
