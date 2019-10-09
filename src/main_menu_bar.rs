@@ -5,7 +5,7 @@ use crate::structs::SubWindowVisibility;
 use crate::structs::FileMenuState;
 use crate::structs::State;
 
-pub fn show_app_main_menu_bar<'a>(ui: &Ui<'a>, state: &mut State) {
+pub fn show_app_main_menu_bar<'a>(ui: &Ui<'a>, state: &mut State, dimensions: (u32, u32)) {
     if let Some(menu_bar) = ui.begin_main_menu_bar() {
         if let Some(menu) = ui.begin_menu(im_str!("File"), true) {
             show_main_menu_file(ui, &mut state.file_menu, &mut state.sub_windows);
@@ -23,6 +23,8 @@ pub fn show_app_main_menu_bar<'a>(ui: &Ui<'a>, state: &mut State) {
             show_main_menu_help(ui);
             menu.end(ui);
         }
+        ui.same_line((dimensions.0 as f32) - (ui.calc_text_size(&im_str!("{:}",state.window_title), false, 0.)[0] + 20.));
+        ui.text(im_str!("{:}", state.window_title));
         menu_bar.end(ui);
     }
 }

@@ -5,7 +5,7 @@ use crate::structs::RenderState;
 use std::collections::HashMap;
 use std::str;
 
-fn larse(input_u8: Vec<u8>, begin: usize) -> Result<Vec<ParseNode>, String> {
+fn larse(input_u8: &Vec<u8>, begin: usize) -> Result<Vec<ParseNode>, String> {
     let mut result = Vec::new();
     let mut i = begin;
     'outer: while i < input_u8.len() {
@@ -53,7 +53,15 @@ fn larse(input_u8: Vec<u8>, begin: usize) -> Result<Vec<ParseNode>, String> {
                                         } else {
                                             if is_name {
                                                 if attr_name != "".to_string() {
-                                                    attributes.insert(attr_name, attr_val);
+                                                    if attr_val.len() > 3 {
+                                                        attributes.insert(
+                                                            attr_name,
+                                                            attr_val[1..(attr_val.len() - 1)]
+                                                                .to_string(),
+                                                        );
+                                                    } else {
+                                                        attributes.insert(attr_name, attr_val);
+                                                    }
                                                     attr_name = String::from("");
                                                     attr_val = String::from("");
                                                 }
@@ -73,7 +81,14 @@ fn larse(input_u8: Vec<u8>, begin: usize) -> Result<Vec<ParseNode>, String> {
                                 x += 1;
                             }
                             if attr_name != "".to_string() {
-                                attributes.insert(attr_name, attr_val);
+                                if attr_val.len() > 3 {
+                                    attributes.insert(
+                                        attr_name,
+                                        attr_val[1..(attr_val.len() - 1)].to_string(),
+                                    );
+                                } else {
+                                    attributes.insert(attr_name, attr_val);
+                                }
                             }
                         }
                         if x < input_u8.len() {
@@ -123,7 +138,7 @@ fn larse(input_u8: Vec<u8>, begin: usize) -> Result<Vec<ParseNode>, String> {
                                     if input_u8[x] as char != '<' || html_tag == HTMLToken::Script {
                                         text.push(input_u8[x]);
                                     } else {
-                                        if text != "".as_bytes().to_vec() {
+                                        if text != Vec::<u8>::new() {
                                             let mut node = ParseNode::new();
                                             node.start_ind = start_text;
                                             node.end_ind = x - 1;
@@ -132,9 +147,14 @@ fn larse(input_u8: Vec<u8>, begin: usize) -> Result<Vec<ParseNode>, String> {
                                             children.push(node);
                                             text = Vec::<u8>::new();
                                         }
-                                        let new_children = larse(input_u8.clone(), x).unwrap();
-                                        for child in new_children {
-                                            children.push(child);
+                                        match larse(&input_u8, x) {
+                                            Ok(new_childs) => {
+                                                let new_children = new_childs;
+                                                for child in new_children {
+                                                    children.push(child);
+                                                }
+                                            }
+                                            Err(e) => println!("{}", e),
                                         }
                                         if children.len() != 0 {
                                             x = children[children.len() - 1].end_ind;
@@ -231,9 +251,15 @@ pub fn parse_html(html: &String) -> Vec<RenderItem> {
     root.start_ind = 0;
     root.end_ind = html.len();
     let html_vec = html.as_bytes().to_vec();
-    let result = larse(html_vec, 0).unwrap();
-    for node in result {
-        root.children.push(node);
+    let result;
+    match larse(&html_vec, 0) {
+        Ok(children) => {
+            result = children;
+            for node in result {
+                root.children.push(node);
+            }
+        }
+        Err(e) => println!("{}", e),
     }
     let cur_state = RenderState::new();
     let elements: Vec<RenderItem> = build_array(root, Vec::new(), cur_state);
@@ -252,6 +278,10 @@ fn build_array(
             }
             HTMLToken::HyperLink => {
                 cur_state.link = i.end_ind;
+                match i.attributes.get("href") {
+                    Some(link) => cur_state.url = link.clone(),
+                    None => {}
+                }
             }
             HTMLToken::LineBreak => {
                 let mut break_item = RenderItem::new();
@@ -282,10 +312,7 @@ fn build_array(
                     }
                     if i.end_ind < cur_state.link {
                         item.link = true;
-                        match i.attributes.get("href") {
-                            Some(link) => item.url = link.clone(),
-                            None => {}
-                        }
+                        item.url = cur_state.url.clone();
                     }
                     if i.end_ind < cur_state.code {
                         item.code = true;

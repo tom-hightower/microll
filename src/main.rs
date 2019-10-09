@@ -10,7 +10,7 @@ use structs::State;
 
 fn main() {
     let mut state = State::default();
-    let mut system = support::init(file!());
+    let mut system = support::init("Microll");
     // Change capture to pass dimension as captured variable
     system.main_loop(|run, ui, dimensions| {
         show_main_app(ui, &mut state, run, dimensions);
@@ -23,7 +23,7 @@ fn main() {
 
 fn show_main_app(ui: &Ui, state: &mut State, _opened: &mut bool, dimensions: (u32, u32)) {
     if state.show_app_main_menu_bar {
-        main_menu_bar::show_app_main_menu_bar(ui, state);
+        main_menu_bar::show_app_main_menu_bar(ui, state, dimensions);
         show_main_app_window(ui, state, dimensions);
     }
 }
@@ -52,11 +52,29 @@ fn show_main_app_window(ui: &Ui, state: &mut State, dimensions: (u32, u32)) {
             //let mut print_str = String::new();
             let mut i: usize = 0;
             while i < state.main_body_array.len() {
-                //print_str.push_str(&String::from_utf8(state.main_body_array[i].clone()).unwrap());
-                ui.text_wrapped(&im_str!("{}", &state.main_body_array[i].text));
+                if state.main_body_array[i].title {
+                    state.window_title = state.main_body_array[i].text.clone();
+                } else if state.main_body_array[i].line_break {
+                    ui.new_line();
+                } else if state.main_body_array[i].code {
+                    ui.text_wrapped(&im_str!("\t{}", &state.main_body_array[i].text));
+                } else if state.main_body_array[i].link {
+                    if ui.button(
+                        &im_str!("{}", &state.main_body_array[i].text),
+                        ui.calc_text_size(
+                            &im_str!("{:}", state.main_body_array[i].text),
+                            false,
+                            0.,
+                        ),
+                    ) {
+                        state.url_to_get = im_str!("{}", state.main_body_array[i].url);
+                        go_to_page(state);
+                    }
+                } else {
+                    ui.text_wrapped(&im_str!("{}", &state.main_body_array[i].text));
+                }
                 i += 1;
             }
-            //ui.text_wrapped(&im_str!("{}", print_str));
         });
 }
 
@@ -80,7 +98,13 @@ fn show_go_url_window(ui: &Ui, state: &mut State) {
 }
 
 fn go_to_page(state: &mut State) {
-    let html_text = http::get_text(&String::from(state.url_to_get.to_str().to_owned())).unwrap();
-    state.main_body_array = html::parse_html(&html_text);
+    let html_text;
+    match http::get_text(&String::from(state.url_to_get.to_str().to_owned())) {
+        Ok(text) => {
+            html_text = text;
+            state.main_body_array = html::parse_html(&html_text);
+        }
+        Err(e) => println!("{}", e)
+    }
     state.sub_windows.go_to_link = false;
 }

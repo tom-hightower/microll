@@ -7,9 +7,10 @@ pub struct State {
     pub url_to_get: ImString,
     pub main_body_array: Vec<RenderItem>,
     pub sub_windows: SubWindowVisibility,
+    pub window_title: String,
 }
 
-impl Default for State {
+impl<'a> Default for State {
     fn default() -> Self {
         State {
             show_app_main_menu_bar: true,
@@ -17,6 +18,7 @@ impl Default for State {
             url_to_get: ImString::new("https://adriann.github.io/rust_parser.html"),
             main_body_array: vec![RenderItem::new()],
             sub_windows: Default::default(),
+            window_title: String::from("Microll"),
         }
     }
 }
@@ -132,6 +134,7 @@ pub struct RenderState {
     pub heading: usize,
     pub italics: usize,
     pub link: usize,
+    pub url: String,
     pub title: usize,
     pub code: usize,
 }
@@ -143,6 +146,7 @@ impl RenderState {
             heading: 0,
             italics: 0,
             link: 0,
+            url: String::new(),
             title: 0,
             code: 0,
         }
