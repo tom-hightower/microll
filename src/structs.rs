@@ -26,6 +26,7 @@ impl<'a> Default for State {
 pub struct FileMenuState {
     pub test_enabled: bool,
     pub can_search: bool,
+    pub file_to_get: String,
 }
 
 impl Default for FileMenuState {
@@ -33,6 +34,7 @@ impl Default for FileMenuState {
         FileMenuState {
             test_enabled: true,
             can_search: true,
+            file_to_get: String::from("E:\\Programming\\microll\\src\\test.html"),
         }
     }
 }

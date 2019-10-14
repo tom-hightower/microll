@@ -1,6 +1,9 @@
 use imgui::*;
 use std::process;
 
+extern crate nfd;
+use nfd::Response;
+
 use crate::structs::SubWindowVisibility;
 use crate::structs::FileMenuState;
 use crate::structs::State;
@@ -48,6 +51,18 @@ fn show_main_menu_file<'a>(ui: &Ui<'a>, file_menu_state: &mut FileMenuState, sub
         .shortcut(im_str!("Ctrl+N"))
         .build(ui);
     ui.separator();
+    if MenuItem::new(im_str!("Open file"))
+        .shortcut(im_str!("Ctrl+O"))
+        .build(ui) {
+            let result = nfd::open_file_dialog(Some("html"), None).unwrap_or_else(|e| {
+                panic!(e);
+            });
+            match result {
+                Response::Okay(file_path) => file_menu_state.file_to_get = file_path,
+                _ => println!("File pick canceled"),
+            }
+            
+        }
     MenuItem::new(im_str!("Save As")).build(ui);
     ui.separator();
     if let Some(menu) = ui.begin_menu(im_str!("Colors"), true) {

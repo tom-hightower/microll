@@ -50,6 +50,7 @@ fn show_main_app_window(ui: &Ui, state: &mut State, dimensions: (u32, u32)) {
             {
                 go_to_page(state);
             }
+            ui.same_line(0.);
             if ColorButton::new(im_str!("Red color"), [1.0, 0.0, 0.0, 1.0])
                 .size([50.0, 50.0])
                 .build(ui)
@@ -117,6 +118,6 @@ fn go_to_page(state: &mut State) {
 }
 
 fn go_to_file(state: &mut State) {
-    let contents = fs::read_to_string("E:\\Programming\\microll\\src\\test.html").expect("Something went wrong reading the file");
+    let contents = fs::read_to_string(&state.file_menu.file_to_get).expect("Something went wrong reading the file");
     state.main_body_array = html::parse_html(&contents);
 }

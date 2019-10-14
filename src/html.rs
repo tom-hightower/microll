@@ -238,10 +238,9 @@ fn larse(input_u8: &Vec<u8>, begin: usize) -> Result<Vec<ParseNode>, String> {
 }
 
 fn match_tag(tag: Vec<u8>) -> HTMLToken {
-    let tag_str = match str::from_utf8(&tag) {
-        Ok(v) => v,
-        Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
-    };
+    let tag_str = str::from_utf8(&tag).unwrap_or_else(|e| {
+        panic!("Invalid UTF-8 sequence: {}", e);
+    });
     match tag_str.to_uppercase().as_str() {
         "HTML" => return HTMLToken::HtmlStart,
         "HEAD" => return HTMLToken::Head,

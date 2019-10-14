@@ -8,10 +8,10 @@ edition = "2018"
 
 [dependencies]
 glium = { version = "0.25", default-features = true } # same as in imgui master branch
-imgui = { git = "https://github.com/Gekkio/imgui-rs" }
-imgui-glium-renderer = { git = "https://github.com/Gekkio/imgui-rs" }
-imgui-winit-support = { git = "https://github.com/Gekkio/imgui-rs" }
+imgui = "0.2.1"
+imgui-glium-renderer = "0.2.0"
+imgui-winit-support = "0.2.1"
 clipboard = "0.5"
 
 reqwest = "0.9"
-serde = "1.0"
+nfd = "0.0.4"
