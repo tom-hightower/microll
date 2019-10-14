@@ -1,11 +1,11 @@
 use imgui::*;
-use std::fs;
 
 mod html;
 mod http;
 mod main_menu_bar;
 mod structs;
 mod support;
+mod navigation;
 
 use structs::State;
 
@@ -18,7 +18,6 @@ fn main() {
         if state.sub_windows.go_to_link {
             show_go_url_window(ui, &mut state);
         }
-        //show_test_window(ui);
     });
 }
 
@@ -48,16 +47,15 @@ fn show_main_app_window(ui: &Ui, state: &mut State, dimensions: (u32, u32)) {
                 .size([50.0, 50.0])
                 .build(ui)
             {
-                go_to_page(state);
+                navigation::go_to_page(state);
             }
             ui.same_line(0.);
             if ColorButton::new(im_str!("Red color"), [1.0, 0.0, 0.0, 1.0])
                 .size([50.0, 50.0])
                 .build(ui)
             {
-                go_to_file(state);
+                navigation::go_to_file(state);
             }
-            //let mut print_str = String::new();
             let mut i: usize = 0;
             while i < state.main_body_array.len() {
                 if state.main_body_array[i].title {
@@ -76,7 +74,7 @@ fn show_main_app_window(ui: &Ui, state: &mut State, dimensions: (u32, u32)) {
                         ),
                     ) {
                         state.url_to_get = im_str!("{}", state.main_body_array[i].url);
-                        go_to_page(state);
+                        navigation::go_to_page(state);
                     }
                 } else {
                     ui.text_wrapped(&im_str!("{}", &state.main_body_array[i].text));
@@ -96,28 +94,11 @@ fn show_go_url_window(ui: &Ui, state: &mut State) {
                 .enter_returns_true(true)
                 .build()
             {
-                go_to_page(state);
+                navigation::go_to_page(state);
             }
             ui.same_line(0.);
             if ui.button(im_str!("Go!"), [50., ui.frame_height()]) {
-                go_to_page(state);
+                navigation::go_to_page(state);
             }
         });
-}
-
-fn go_to_page(state: &mut State) {
-    let html_text;
-    match http::get_text(&String::from(state.url_to_get.to_str().to_owned())) {
-        Ok(text) => {
-            html_text = text;
-            state.main_body_array = html::parse_html(&html_text);
-        }
-        Err(e) => println!("{}", e)
-    }
-    state.sub_windows.go_to_link = false;
-}
-
-fn go_to_file(state: &mut State) {
-    let contents = fs::read_to_string(&state.file_menu.file_to_get).expect("Something went wrong reading the file");
-    state.main_body_array = html::parse_html(&contents);
 }

@@ -4,14 +4,14 @@ use std::process;
 extern crate nfd;
 use nfd::Response;
 
-use crate::structs::SubWindowVisibility;
+use crate::navigation;
 use crate::structs::FileMenuState;
 use crate::structs::State;
 
 pub fn show_app_main_menu_bar<'a>(ui: &Ui<'a>, state: &mut State, dimensions: (u32, u32)) {
     if let Some(menu_bar) = ui.begin_main_menu_bar() {
         if let Some(menu) = ui.begin_menu(im_str!("File"), true) {
-            show_main_menu_file(ui, &mut state.file_menu, &mut state.sub_windows);
+            show_main_menu_file(ui, state);
             menu.end(ui);
         }
         if let Some(menu) = ui.begin_menu(im_str!("View"), true) {
@@ -32,11 +32,11 @@ pub fn show_app_main_menu_bar<'a>(ui: &Ui<'a>, state: &mut State, dimensions: (u
     }
 }
 
-fn show_main_menu_file<'a>(ui: &Ui<'a>, file_menu_state: &mut FileMenuState, sub_window_state: &mut SubWindowVisibility) {
+fn show_main_menu_file<'a>(ui: &Ui<'a>, state: &mut State) {
     if MenuItem::new(im_str!("Go to URL"))
         .shortcut(im_str!("Ctrl+G"))
         .build(ui) {
-            sub_window_state.go_to_link = !sub_window_state.go_to_link;
+            state.sub_windows.go_to_link = !state.sub_windows.go_to_link;
         }
     MenuItem::new(im_str!("Go Back"))
         .shortcut(im_str!("Alt+LEFT"))
@@ -58,10 +58,10 @@ fn show_main_menu_file<'a>(ui: &Ui<'a>, file_menu_state: &mut FileMenuState, sub
                 panic!(e);
             });
             match result {
-                Response::Okay(file_path) => file_menu_state.file_to_get = file_path,
+                Response::Okay(file_path) => state.file_menu.file_to_get = file_path,
                 _ => println!("File pick canceled"),
             }
-            
+            navigation::go_to_file(state);
         }
     MenuItem::new(im_str!("Save As")).build(ui);
     ui.separator();
@@ -72,7 +72,7 @@ fn show_main_menu_file<'a>(ui: &Ui<'a>, file_menu_state: &mut FileMenuState, sub
         menu.end(ui);
     }
     MenuItem::new(im_str!("Checked Test"))
-        .selected(file_menu_state.test_enabled)
+        .selected(state.file_menu.test_enabled)
         .build(ui);
     if MenuItem::new(im_str!("Quit"))
         .shortcut(im_str!("Alt+F4"))
