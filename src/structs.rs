@@ -98,6 +98,23 @@ impl ParseNode {
             end_ind: 0,
         }
     }
+    pub fn create(
+        children: Vec<ParseNode>,
+        tag: HTMLToken,
+        attributes: HashMap<String, String>,
+        text: Vec<u8>,
+        start_ind: usize,
+        end_ind: usize,
+    ) -> ParseNode {
+        ParseNode {
+            children,
+            tag,
+            attributes,
+            text,
+            start_ind,
+            end_ind,
+        }
+    }
 }
 
 pub struct RenderItem {

@@ -1,4 +1,5 @@
 use imgui::*;
+use std::fs;
 
 mod html;
 mod http;
@@ -48,6 +49,12 @@ fn show_main_app_window(ui: &Ui, state: &mut State, dimensions: (u32, u32)) {
                 .build(ui)
             {
                 go_to_page(state);
+            }
+            if ColorButton::new(im_str!("Red color"), [1.0, 0.0, 0.0, 1.0])
+                .size([50.0, 50.0])
+                .build(ui)
+            {
+                go_to_file(state);
             }
             //let mut print_str = String::new();
             let mut i: usize = 0;
@@ -107,4 +114,9 @@ fn go_to_page(state: &mut State) {
         Err(e) => println!("{}", e)
     }
     state.sub_windows.go_to_link = false;
+}
+
+fn go_to_file(state: &mut State) {
+    let contents = fs::read_to_string("E:\\Programming\\microll\\src\\test.html").expect("Something went wrong reading the file");
+    state.main_body_array = html::parse_html(&contents);
 }
