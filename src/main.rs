@@ -1,5 +1,6 @@
 use imgui::*;
-
+#[macro_use]
+mod macros;
 mod html;
 mod http;
 mod main_menu_bar;
@@ -56,34 +57,47 @@ fn show_main_app_window(ui: &Ui, state: &mut State, dimensions: (u32, u32)) {
             {
                 navigation::go_to_file(state);
             }
-            let mut i: usize = 0;
-            while i < state.main_body_array.len() {
-                if state.main_body_array[i].title {
-                    state.window_title = state.main_body_array[i].text.clone();
-                } else if state.main_body_array[i].line_break {
-                    ui.new_line();
-                } else if state.main_body_array[i].code {
-                    ui.text_wrapped(&im_str!("\t{}", &state.main_body_array[i].text));
-                } else if state.main_body_array[i].link {
-                    let calc_size = ui.calc_text_size(
-                            &im_str!("{}", &state.main_body_array[i].text),
-                            false,
-                            0.,
-                        );
-                    if ui.button(
-                        &im_str!("{}", &state.main_body_array[i].text),
-                        [calc_size[0] + 10., calc_size[1] + 5.],
-                    ) {
-                        state.url_to_get = im_str!("{}", state.main_body_array[i].url);
-                        navigation::go_to_page(state);
-                    }
-                    ui.same_line(0.);
-                } else {
-                    ui.text_wrapped(&im_str!("{}", &state.main_body_array[i].text));
-                }
-                i += 1;
-            }
+            build_webpage(ui, state);
         });
+}
+
+fn build_webpage(ui: &Ui, state: &mut State) {
+    let mut i: usize = 0;
+    while i < state.main_body_array.len() {
+        if state.main_body_array[i].title {
+            state.window_title = state.main_body_array[i].text.clone();
+        } else if state.main_body_array[i].line_break {
+            ui.new_line();
+            ui.text(&im_str!("\n"));
+            ui.new_line();
+        } else if state.main_body_array[i].code {
+            if !state.main_body_array[i - 1].code && !state.main_body_array[i + 1].code {
+                ui.text_wrapped(&im_str!("{}", &state.main_body_array[i].text));
+                ui.same_line(0.);
+            } else {
+                let mut code_text: String = state.main_body_array[i].text.clone();
+                while state.main_body_array[i + 1].code {
+                    i += 1;
+                    code_text.push_str(&state.main_body_array[i].text);
+                }
+                ui.text_wrapped(&im_str!("{}", code_text));
+            }
+        } else if state.main_body_array[i].link {
+            let calc_size =
+                ui.calc_text_size(&im_str!("{}", &state.main_body_array[i].text), false, 0.);
+            if ui.button(
+                &im_str!("{}", &state.main_body_array[i].text),
+                [calc_size[0] + 10., calc_size[1] + 5.],
+            ) {
+                state.url_to_get = im_str!("{}", state.main_body_array[i].url);
+                navigation::go_to_page(state);
+            }
+            ui.same_line(0.);
+        } else {
+            ui.text_wrapped(&im_str!("{}", &state.main_body_array[i].text));
+        }
+        i += 1;
+    }
 }
 
 fn show_go_url_window(ui: &Ui, state: &mut State) {
