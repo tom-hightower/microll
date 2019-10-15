@@ -84,16 +84,13 @@ pub fn init(title: &str) -> System {
 }
 
 impl System {
-
     // main_loop will mutate System object calling it
     // modify mutably captured close `FnMut` to take 2-tuple of u32, representing dimension
     pub fn main_loop<F: FnMut(&mut bool, &mut Ui, (u32, u32))>(&mut self, mut run_ui: F) {
-        
         let events_loop = &mut self.events_loop;
         let imgui = &mut self.imgui;
         let platform = &mut self.platform;
         let renderer = &mut self.renderer;
-        
         let gl_window = self.display.gl_window();
         let window = gl_window.window();
         let mut last_frame = Instant::now();
@@ -115,7 +112,6 @@ impl System {
                 .expect("Failed to start frame");
             last_frame = io.update_delta_time(last_frame);
             let mut ui = imgui.frame();
-            
             // Pass dimension here
             run_ui(&mut run, &mut ui, self.display.get_framebuffer_dimensions());
             let mut target = self.display.draw();

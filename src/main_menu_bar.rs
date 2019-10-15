@@ -26,7 +26,10 @@ pub fn show_app_main_menu_bar<'a>(ui: &Ui<'a>, state: &mut State, dimensions: (u
             show_main_menu_help(ui);
             menu.end(ui);
         }
-        ui.same_line((dimensions.0 as f32) - (ui.calc_text_size(&im_str!("{:}",state.window_title), false, 0.)[0] + 20.));
+        ui.same_line(
+            (dimensions.0 as f32)
+                - (ui.calc_text_size(&im_str!("{:}", state.window_title), false, 0.)[0] + 20.),
+        );
         ui.text(im_str!("{:}", state.window_title));
         menu_bar.end(ui);
     }
@@ -35,9 +38,10 @@ pub fn show_app_main_menu_bar<'a>(ui: &Ui<'a>, state: &mut State, dimensions: (u
 fn show_main_menu_file<'a>(ui: &Ui<'a>, state: &mut State) {
     if MenuItem::new(im_str!("Go to URL"))
         .shortcut(im_str!("Ctrl+G"))
-        .build(ui) {
-            state.sub_windows.go_to_link = !state.sub_windows.go_to_link;
-        }
+        .build(ui)
+    {
+        state.sub_windows.go_to_link = !state.sub_windows.go_to_link;
+    }
     MenuItem::new(im_str!("Go Back"))
         .shortcut(im_str!("Alt+LEFT"))
         .build(ui);
@@ -53,16 +57,17 @@ fn show_main_menu_file<'a>(ui: &Ui<'a>, state: &mut State) {
     ui.separator();
     if MenuItem::new(im_str!("Open file"))
         .shortcut(im_str!("Ctrl+O"))
-        .build(ui) {
-            let result = nfd::open_file_dialog(Some("html"), None).unwrap_or_else(|e| {
-                panic!(e);
-            });
-            match result {
-                Response::Okay(file_path) => state.file_menu.file_to_get = file_path,
-                _ => println!("File pick canceled"),
-            }
-            navigation::go_to_file(state);
+        .build(ui)
+    {
+        let result = nfd::open_file_dialog(Some("html"), None).unwrap_or_else(|e| {
+            panic!(e);
+        });
+        match result {
+            Response::Okay(file_path) => state.file_menu.file_to_get = file_path,
+            _ => println!("File pick canceled"),
         }
+        navigation::go_to_file(state);
+    }
     MenuItem::new(im_str!("Save As")).build(ui);
     ui.separator();
     if let Some(menu) = ui.begin_menu(im_str!("Colors"), true) {
@@ -71,14 +76,17 @@ fn show_main_menu_file<'a>(ui: &Ui<'a>, state: &mut State) {
         }
         menu.end(ui);
     }
-    MenuItem::new(im_str!("Checked Test"))
+    if MenuItem::new(im_str!("Checked Test"))
         .selected(state.file_menu.test_enabled)
-        .build(ui);
+        .build(ui) {
+            state.file_menu.test_enabled = !state.file_menu.test_enabled;
+        }
     if MenuItem::new(im_str!("Quit"))
         .shortcut(im_str!("Alt+F4"))
-        .build(ui) {
-            process::exit(0x0000);
-        }
+        .build(ui)
+    {
+        process::exit(0x0000);
+    }
 }
 
 fn show_main_menu_view<'a>(ui: &Ui<'a>, file_menu_state: &mut FileMenuState) {

@@ -44,7 +44,7 @@ fn larse(input_u8: &Vec<u8>, begin: usize) -> Result<Vec<ParseNode>, String> {
                             {
                                 match input_u8[buf_pos] as char {
                                     '=' => is_name = !is_name,
-                                    ' ' => {
+                                    ' ' | '\t' | '\r' | '\n' => {
                                         if input_u8[buf_pos - 1] as char == '\"'
                                             || input_u8[buf_pos - 1] as char == '\''
                                         {
