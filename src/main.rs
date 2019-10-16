@@ -13,6 +13,7 @@ use structs::State;
 fn main() {
     let mut state = State::default();
     let mut system = support::init("Microll");
+    *state.preloaded_pages.get_mut("microll").unwrap() = string!(include_str!("microll.html"));
     // Change capture to pass dimension as captured variable
     system.main_loop(|run, ui, dimensions| {
         show_main_app(ui, &mut state, run, dimensions);

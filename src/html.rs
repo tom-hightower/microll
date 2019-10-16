@@ -248,7 +248,7 @@ fn match_tag(tag: Vec<u8>) -> HTMLToken {
         "!--" => return HTMLToken::Comment,
         "!DOCTYPE" => return HTMLToken::DocType,
         "AREA" | "BASE" | "COL" | "COMMAND" | "EMBED" | "IMG" | "INPUT" | "KEYGEN" | "LINK"
-        | "META" | "PARAM" | "SOURCE" | "TRACK" => return HTMLToken::VOID,
+        | "META" | "PARAM" | "SOURCE" | "TRACK" | "PATH" => return HTMLToken::VOID,
         _ => return HTMLToken::Unknown,
     }
 }

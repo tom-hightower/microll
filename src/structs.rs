@@ -8,6 +8,8 @@ pub struct State {
     pub main_body_array: Vec<RenderItem>,
     pub sub_windows: SubWindowVisibility,
     pub window_title: String,
+    pub history: HashMap<String, WebpageFinder>,
+    pub preloaded_pages: HashMap<String, String>,
 }
 
 impl<'a> Default for State {
@@ -19,6 +21,8 @@ impl<'a> Default for State {
             main_body_array: vec![RenderItem::new()],
             sub_windows: Default::default(),
             window_title: String::from("Microll"),
+            history: hashmap![string!("Microll: The Text-Based Web Browser") => WebpageFinder::create(WebpageType::Preload, string!("microll"))],
+            preloaded_pages: hashmap![string!("microll") => string!("microll.html")],
         }
     }
 }
@@ -46,6 +50,30 @@ pub struct SubWindowVisibility {
 impl Default for SubWindowVisibility {
     fn default() -> Self {
         SubWindowVisibility { go_to_link: false }
+    }
+}
+
+#[derive(PartialEq, Debug)]
+pub enum WebpageType {
+    Link,    // http://mypage.com
+    File,    // C:/User/username/Documents/test.html
+    Preload, // microll
+}
+
+pub struct WebpageFinder {
+    pub web_type: WebpageType,
+    pub location: String,
+}
+
+impl WebpageFinder {
+    fn new() -> Self {
+        WebpageFinder {
+            web_type: WebpageType::Link,
+            location: string!(""),
+        }
+    }
+    fn create(web_type: WebpageType, location: String) -> Self {
+        WebpageFinder { web_type, location }
     }
 }
 
