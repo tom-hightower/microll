@@ -1,9 +1,6 @@
 use imgui::*;
 use std::process;
 
-extern crate nfd;
-use nfd::Response;
-
 use crate::navigation;
 use crate::structs::FileMenuState;
 use crate::structs::State;
@@ -59,13 +56,7 @@ fn show_main_menu_file<'a>(ui: &Ui<'a>, state: &mut State) {
         .shortcut(im_str!("Ctrl+O"))
         .build(ui)
     {
-        let result = nfd::open_file_dialog(Some("html"), None).unwrap_or_else(|e| {
-            panic!(e);
-        });
-        match result {
-            Response::Okay(file_path) => state.file_menu.file_to_get = file_path,
-            _ => println!("File pick canceled"),
-        }
+        navigation::file_picker(state);
         navigation::go_to_file(state);
     }
     MenuItem::new(im_str!("Save As")).build(ui);

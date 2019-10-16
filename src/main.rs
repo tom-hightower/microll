@@ -56,7 +56,8 @@ fn show_main_app_window(ui: &Ui, state: &mut State, dimensions: (u32, u32)) {
                 .size([50.0, 50.0])
                 .build(ui)
             {
-                navigation::go_to_file(state);
+                state.main_body_array = html::parse_html(&state.preloaded_pages["microll"]);
+                //navigation::go_to_file(state);
             }
             build_webpage(ui, state);
         });

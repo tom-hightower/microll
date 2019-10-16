@@ -149,8 +149,8 @@ fn larse(input_u8: &Vec<u8>, begin: usize) -> Result<Vec<ParseNode>, String> {
                                         }
                                         match larse(&input_u8, buf_pos) {
                                             Ok(new_childs) => {
-                                                let new_children = new_childs;
-                                                for child in new_children {
+                                                
+                                                for child in new_childs {
                                                     children.push(child);
                                                 }
                                             }
