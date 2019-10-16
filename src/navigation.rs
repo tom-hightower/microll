@@ -1,6 +1,6 @@
 use crate::html;
 use crate::http;
-use crate::structs::State;
+use crate::structs::{State, WebpageFinder, WebpageType};
 use std::fs;
 
 extern crate nfd;
@@ -11,7 +11,14 @@ pub fn go_to_page(state: &mut State) {
     match http::get_text(&String::from(state.url_to_get.to_str().to_owned())) {
         Ok(text) => {
             html_text = text;
-            state.main_body_array = html::parse_html(&html_text);
+            let parsed = html::parse_html(&html_text);
+            state.main_body_array = parsed.0;
+            add_to_history(
+                parsed.1,
+                string!(state.url_to_get.to_str()),
+                WebpageType::Link,
+                state,
+            );
         }
         Err(e) => println!("{}", e),
     }
@@ -21,7 +28,14 @@ pub fn go_to_page(state: &mut State) {
 pub fn go_to_file(state: &mut State) {
     let contents = fs::read_to_string(&state.file_menu.file_to_get)
         .expect("Something went wrong reading the file");
-    state.main_body_array = html::parse_html(&contents);
+    let parsed = html::parse_html(&contents);
+    state.main_body_array = parsed.0;
+    add_to_history(
+        parsed.1,
+        state.file_menu.file_to_get.clone(),
+        WebpageType::File,
+        state,
+    );
 }
 
 pub fn file_picker(state: &mut State) {
@@ -34,4 +48,10 @@ pub fn file_picker(state: &mut State) {
     }
 }
 
-//pub fn add_to_history()
+pub fn add_to_history(title: String, url: String, web_type: WebpageType, state: &mut State) {
+    if state.history.contains_key(&title) {
+        state.history.remove(&title);
+    }
+    let finder: WebpageFinder = WebpageFinder::create(web_type, url);
+    state.history.insert(title, finder);
+}

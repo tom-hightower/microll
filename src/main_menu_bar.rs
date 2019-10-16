@@ -1,9 +1,9 @@
 use imgui::*;
 use std::process;
 
+use crate::html;
 use crate::navigation;
-use crate::structs::FileMenuState;
-use crate::structs::State;
+use crate::structs::{State, FileMenuState, WebpageType};
 
 pub fn show_app_main_menu_bar<'a>(ui: &Ui<'a>, state: &mut State, dimensions: (u32, u32)) {
     if let Some(menu_bar) = ui.begin_main_menu_bar() {
@@ -43,9 +43,23 @@ fn show_main_menu_file<'a>(ui: &Ui<'a>, state: &mut State) {
         .shortcut(im_str!("Alt+LEFT"))
         .build(ui);
     if let Some(menu) = ui.begin_menu(im_str!("Recent"), true) {
-        MenuItem::new(im_str!("Site 1")).build(ui);
-        MenuItem::new(im_str!("Site 2")).build(ui);
-        MenuItem::new(im_str!("Site 3")).build(ui);
+        for (name, finder) in &state.history.clone() {
+            if MenuItem::new(&ImString::new(name)).build(ui) {
+                match finder.web_type {
+                    WebpageType::File => {
+                        state.file_menu.file_to_get = finder.location.clone();
+                        navigation::go_to_file(state);
+                    }
+                    WebpageType::Link => {
+                        state.url_to_get = ImString::from(finder.location.clone());
+                        navigation::go_to_page(state);
+                    }
+                    WebpageType::Preload => {
+                        state.main_body_array = html::parse_html(&state.preloaded_pages[&finder.location]).0;
+                    }
+                }
+            }
+        }
         menu.end(ui);
     }
     MenuItem::new(im_str!("New Window"))

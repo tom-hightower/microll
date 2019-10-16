@@ -53,26 +53,21 @@ impl Default for SubWindowVisibility {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum WebpageType {
     Link,    // http://mypage.com
     File,    // C:/User/username/Documents/test.html
     Preload, // microll
 }
 
+#[derive(Clone)]
 pub struct WebpageFinder {
     pub web_type: WebpageType,
     pub location: String,
 }
 
 impl WebpageFinder {
-    fn new() -> Self {
-        WebpageFinder {
-            web_type: WebpageType::Link,
-            location: string!(""),
-        }
-    }
-    fn create(web_type: WebpageType, location: String) -> Self {
+    pub fn create(web_type: WebpageType, location: String) -> Self {
         WebpageFinder { web_type, location }
     }
 }

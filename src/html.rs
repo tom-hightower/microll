@@ -253,7 +253,7 @@ fn match_tag(tag: Vec<u8>) -> HTMLToken {
     }
 }
 
-pub fn parse_html(html: &String) -> Vec<RenderItem> {
+pub fn parse_html(html: &String) -> (Vec<RenderItem>, String) {
     let mut root = ParseNode::new();
     root.tag = HTMLToken::ROOT;
     root.start_ind = 0;
@@ -270,15 +270,16 @@ pub fn parse_html(html: &String) -> Vec<RenderItem> {
         Err(e) => println!("{}", e),
     }
     let cur_state = RenderState::new();
-    let elements: Vec<RenderItem> = build_array(root, Vec::new(), cur_state);
-    return elements;
+    return build_array(root, Vec::new(), cur_state, string!(""));
 }
 
 fn build_array(
     node: ParseNode,
     mut ret_vec: Vec<RenderItem>,
     mut cur_state: RenderState,
-) -> Vec<RenderItem> {
+    title: String,
+) -> (Vec<RenderItem>, String) {
+    let mut cur_title = title;
     for i in node.children {
         match i.tag {
             HTMLToken::BoldText => {
@@ -335,6 +336,7 @@ fn build_array(
                     }
                     if i.end_ind < cur_state.title {
                         item.title = true;
+                        cur_title = item.text.clone();
                     }
                     if i.end_ind < cur_state.heading {
                         item.heading = true;
@@ -344,9 +346,11 @@ fn build_array(
             }
             _ => {}
         }
-        ret_vec = build_array(i, ret_vec, cur_state.clone());
+        let ret = build_array(i, ret_vec, cur_state.clone(), cur_title.clone());
+        ret_vec = ret.0;
+        cur_title = ret.1;
     }
-    return ret_vec;
+    return (ret_vec, cur_title);
 }
 
 fn eat_whitespace(input_u8: &Vec<u8>, mut buf_pos: usize, incl_space: Option<bool>) -> usize {
