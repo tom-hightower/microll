@@ -24,7 +24,6 @@ pub fn get_text(url: &String, state: &mut State) -> Result<(String, String), req
                 } else {
                     new_url.push_str(url);
                 }
-                println!("New URL: {}", new_url);
                 return get_text(&new_url, state);
             } else {
                 println!("Error: {}", e);

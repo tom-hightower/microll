@@ -3,7 +3,7 @@ use std::process;
 
 use crate::html;
 use crate::navigation;
-use crate::structs::{State, FileMenuState, WebpageType};
+use crate::structs::{FileMenuState, State, WebpageType};
 
 pub fn show_app_main_menu_bar<'a>(ui: &Ui<'a>, state: &mut State, dimensions: (u32, u32)) {
     if let Some(menu_bar) = ui.begin_main_menu_bar() {
@@ -55,7 +55,8 @@ fn show_main_menu_file<'a>(ui: &Ui<'a>, state: &mut State) {
                         navigation::go_to_page(state);
                     }
                     WebpageType::Preload => {
-                        state.main_body_array = html::parse_html(&state.preloaded_pages[&finder.location]).0;
+                        state.main_body_array =
+                            html::parse_html(&state.preloaded_pages[&finder.location]).0;
                     }
                 }
             }
@@ -70,8 +71,9 @@ fn show_main_menu_file<'a>(ui: &Ui<'a>, state: &mut State) {
         .shortcut(im_str!("Ctrl+O"))
         .build(ui)
     {
-        navigation::file_picker(state);
-        navigation::go_to_file(state);
+        if navigation::file_picker(state) {
+            navigation::go_to_file(state);
+        }
     }
     MenuItem::new(im_str!("Save As")).build(ui);
     ui.separator();
@@ -83,9 +85,10 @@ fn show_main_menu_file<'a>(ui: &Ui<'a>, state: &mut State) {
     }
     if MenuItem::new(im_str!("Checked Test"))
         .selected(state.file_menu.test_enabled)
-        .build(ui) {
-            state.file_menu.test_enabled = !state.file_menu.test_enabled;
-        }
+        .build(ui)
+    {
+        state.file_menu.test_enabled = !state.file_menu.test_enabled;
+    }
     if MenuItem::new(im_str!("Quit"))
         .shortcut(im_str!("Alt+F4"))
         .build(ui)

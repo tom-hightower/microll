@@ -13,12 +13,7 @@ pub fn go_to_page(state: &mut State) {
             html_text = text;
             let parsed = html::parse_html(&html_text);
             state.main_body_array = parsed.0;
-            add_to_history(
-                parsed.1,
-                url,
-                WebpageType::Link,
-                state,
-            );
+            add_to_history(parsed.1, url, WebpageType::Link, state);
         }
         Err(e) => println!("{}", e),
     }
@@ -38,14 +33,20 @@ pub fn go_to_file(state: &mut State) {
     );
 }
 
-pub fn file_picker(state: &mut State) {
+pub fn file_picker(state: &mut State) -> bool {
     let result = nfd::open_file_dialog(Some("html"), None).unwrap_or_else(|e| {
         panic!(e);
     });
-    match result {
-        Response::Okay(file_path) => state.file_menu.file_to_get = file_path,
-        _ => println!("File pick canceled"),
-    }
+    return match result {
+        Response::Okay(file_path) => {
+            state.file_menu.file_to_get = file_path;
+            true
+        }
+        _ => {
+            println!("File pick canceled");
+            false
+        }
+    };
 }
 
 pub fn add_to_history(title: String, url: String, web_type: WebpageType, state: &mut State) {
