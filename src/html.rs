@@ -128,6 +128,7 @@ fn larse(input_u8: &Vec<u8>, begin: usize) -> Result<Vec<ParseNode>, String> {
                                 buf_pos += 1;
                                 let mut text = Vec::<u8>::new();
                                 let mut children = Vec::<ParseNode>::new();
+                                buf_pos = eat_whitespace(input_u8, buf_pos, Some(true));
                                 let mut start_text: usize = buf_pos;
                                 while !is_closing_tag(input_u8, buf_pos, &tag) {
                                     if input_u8[buf_pos] != '<' as u8

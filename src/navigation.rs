@@ -8,14 +8,14 @@ use nfd::Response;
 
 pub fn go_to_page(state: &mut State) {
     let html_text;
-    match http::get_text(&String::from(state.url_to_get.to_str().to_owned())) {
-        Ok(text) => {
+    match http::get_text(&String::from(state.url_to_get.to_str().to_owned()), state) {
+        Ok((text, url)) => {
             html_text = text;
             let parsed = html::parse_html(&html_text);
             state.main_body_array = parsed.0;
             add_to_history(
                 parsed.1,
-                string!(state.url_to_get.to_str()),
+                url,
                 WebpageType::Link,
                 state,
             );
