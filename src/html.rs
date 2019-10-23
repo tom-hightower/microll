@@ -29,7 +29,6 @@ fn larse(input_u8: &Vec<u8>, begin: usize) -> Result<(Vec<ParseNode>, usize), St
                         let html_tag = match_tag(tag.clone());
                         let mut attributes: HashMap<String, String> = HashMap::new();
                         if (input_u8[buf_pos] != '>' as u8)
-                            //&& (html_tag != HTMLToken::Unknown)
                             && (html_tag != HTMLToken::Comment)
                             && (html_tag != HTMLToken::DocType)
                         {
@@ -88,13 +87,7 @@ fn larse(input_u8: &Vec<u8>, begin: usize) -> Result<(Vec<ParseNode>, usize), St
                                     attributes.insert(attr_name, attr_val);
                                 }
                             }
-                        } /*
-                          while html_tag == HTMLToken::Unknown
-                              && !(input_u8[buf_pos] == '>' as u8
-                                  || (input_u8[buf_pos] == '/' as u8
-                                      && input_u8[buf_pos + 1] == '>' as u8))
-                          {
-                          }*/
+                        }
                         if buf_pos < input_u8.len() {
                             if input_u8[buf_pos] == '/' as u8 || html_tag == HTMLToken::VOID {
                                 // self closing tag
