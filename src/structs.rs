@@ -98,7 +98,7 @@ pub struct SubWindowVisibility {
 
 impl Default for SubWindowVisibility {
     fn default() -> Self {
-        SubWindowVisibility { go_to_link: false }
+        SubWindowVisibility { go_to_link: true }
     }
 }
 

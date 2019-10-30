@@ -37,7 +37,7 @@ fn main() {
 }
 
 fn show_main_app(ui: &mut conrod::UiCell, state: &mut State, ids: &mut Ids) {
-    let mut master_flowdown;
+    let master_flowdown;
     if state.show_app_main_menu_bar {
         if state.sub_windows.go_to_link {
             master_flowdown = vec![
@@ -49,12 +49,12 @@ fn show_main_app(ui: &mut conrod::UiCell, state: &mut State, ids: &mut Ids) {
                 ),
                 (
                     ids.url_bar.canvas,
-                    widget::Canvas::new().color(color::DARK_CHARCOAL),
+                    widget::Canvas::new()
+                        .color(color::DARK_CHARCOAL)
+                        .length(30.),
                 ),
                 (ids.body, widget::Canvas::new().color(color::CHARCOAL)),
             ];
-            //main_menu_bar::show_app_main_menu_bar(ui, state, dimensions);
-            show_go_url_window(ui, state, ids);
         } else {
             master_flowdown = vec![
                 (
@@ -65,7 +65,6 @@ fn show_main_app(ui: &mut conrod::UiCell, state: &mut State, ids: &mut Ids) {
                 ),
                 (ids.body, widget::Canvas::new().color(color::CHARCOAL)),
             ];
-            //main_menu_bar::show_app_main_menu_bar(ui, state, dimensions);
         }
     } else {
         master_flowdown = vec![(ids.body, widget::Canvas::new().color(color::CHARCOAL))];
@@ -73,6 +72,12 @@ fn show_main_app(ui: &mut conrod::UiCell, state: &mut State, ids: &mut Ids) {
     widget::Canvas::new()
         .flow_down(&master_flowdown)
         .set(ids.master, ui);
+    if state.show_app_main_menu_bar {
+        //main_menu_bar::show_app_main_menu_bar(ui, state, dimensions);
+        if state.sub_windows.go_to_link {
+            show_go_url_window(ui, state, ids);
+        }
+    }
     show_main_app_window(ui, state, ids);
 }
 
@@ -166,29 +171,18 @@ fn build_webpage(ui: &mut conrod::UiCell, state: &mut State, ids: &mut Ids) {
 fn show_go_url_window(ui: &mut conrod::UiCell, state: &mut State, ids: &mut Ids) {
     widget::Text::new("Go To URL...")
         .parent(ids.url_bar.canvas)
+        .mid_left_of(ids.url_bar.canvas)
         .set(ids.url_bar.title_text, ui);
-    for event in widget::TextBox::new(&state.url_to_get).set(ids.url_bar.input_box, ui) {
+    for event in widget::TextBox::new(&state.url_to_get)
+        .parent(ids.url_bar.canvas)
+        .middle_of(ids.url_bar.canvas)
+        .w_h(500., 25.)
+        .font_size(12)
+        .set(ids.url_bar.input_box, ui)
+    {
         match event {
             widget::text_box::Event::Enter => navigation::go_to_page(state),
             widget::text_box::Event::Update(string) => state.url_to_get = string,
         }
     }
-    /*
-    Window::new(im_str!("Go To URL..."))
-        .size([0.0, 0.0], Condition::FirstUseEver)
-        .always_auto_resize(true)
-        .build(ui, || {
-            if ui
-                .input_text(im_str!(""), &mut state.url_to_get)
-                .enter_returns_true(true)
-                .build()
-            {
-                navigation::go_to_page(state);
-            }
-            ui.same_line(0.);
-            if ui.button(im_str!("Go!"), [50., ui.frame_height()]) {
-                navigation::go_to_page(state);
-            }
-        });
-        */
 }
