@@ -31,10 +31,8 @@ impl<'a> Default for State {
 pub struct Ids {
     pub master: conrod::widget::Id,
     pub menu_bar: conrod::widget::Id,
+    pub url_bar: UrlBarIds,
     pub body: conrod::widget::Id,
-    pub btn: conrod::widget::Id,
-    pub text: conrod::widget::Id,
-    pub auto_btn: conrod::widget::Id,
     pub file_load_btn: conrod::widget::Id,
     pub page_load_btn: conrod::widget::Id,
     pub line_breaks: conrod::widget::id::List,
@@ -48,16 +46,32 @@ impl Ids {
         Ids {
             master: generator.next(),
             menu_bar: generator.next(),
+            url_bar: UrlBarIds::new(&mut generator),
             body: generator.next(),
-            btn: generator.next(),
-            text: generator.next(),
-            auto_btn: generator.next(),
             file_load_btn: generator.next(),
             page_load_btn: generator.next(),
             line_breaks: conrod::widget::id::List::new(),
             code_elements: conrod::widget::id::List::new(),
             text_elements: conrod::widget::id::List::new(),
             link_elements: conrod::widget::id::List::new(),
+        }
+    }
+}
+
+pub struct UrlBarIds {
+    pub canvas: conrod::widget::Id,
+    pub title_text: conrod::widget::Id,
+    pub input_box: conrod::widget::Id,
+    pub go_button: conrod::widget::Id,
+}
+
+impl UrlBarIds {
+    fn new(generator: &mut conrod::widget::id::Generator) -> Self {
+        UrlBarIds {
+            canvas: generator.next(),
+            title_text: generator.next(),
+            input_box: generator.next(),
+            go_button: generator.next(),
         }
     }
 }

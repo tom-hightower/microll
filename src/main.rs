@@ -14,7 +14,7 @@ mod navigation;
 mod structs;
 mod support;
 
-use structs::{State, Ids};
+use structs::{Ids, State};
 
 fn main() {
     let mut system = support::init("Microll");
@@ -39,16 +39,34 @@ fn main() {
 fn show_main_app(ui: &mut conrod::UiCell, state: &mut State, ids: &mut Ids) {
     let mut master_flowdown;
     if state.show_app_main_menu_bar {
-        master_flowdown = vec![
-            (
-                ids.menu_bar,
-                widget::Canvas::new()
-                    .color(color::DARK_CHARCOAL)
-                    .length(20.),
-            ),
-            (ids.body, widget::Canvas::new().color(color::CHARCOAL)),
-        ];
-    //main_menu_bar::show_app_main_menu_bar(ui, state, dimensions);
+        if state.sub_windows.go_to_link {
+            master_flowdown = vec![
+                (
+                    ids.menu_bar,
+                    widget::Canvas::new()
+                        .color(color::DARK_CHARCOAL)
+                        .length(20.),
+                ),
+                (
+                    ids.url_bar.canvas,
+                    widget::Canvas::new().color(color::DARK_CHARCOAL),
+                ),
+                (ids.body, widget::Canvas::new().color(color::CHARCOAL)),
+            ];
+            //main_menu_bar::show_app_main_menu_bar(ui, state, dimensions);
+            show_go_url_window(ui, state, ids);
+        } else {
+            master_flowdown = vec![
+                (
+                    ids.menu_bar,
+                    widget::Canvas::new()
+                        .color(color::DARK_CHARCOAL)
+                        .length(20.),
+                ),
+                (ids.body, widget::Canvas::new().color(color::CHARCOAL)),
+            ];
+            //main_menu_bar::show_app_main_menu_bar(ui, state, dimensions);
+        }
     } else {
         master_flowdown = vec![(ids.body, widget::Canvas::new().color(color::CHARCOAL))];
     }
@@ -97,39 +115,65 @@ fn build_webpage(ui: &mut conrod::UiCell, state: &mut State, ids: &mut Ids) {
         if state.main_body_array[i].title {
             state.window_title = state.main_body_array[i].text.clone();
         } else if state.main_body_array[i].line_break {
-            ids.line_breaks.resize(ids.line_breaks.len()+1, &mut ui.widget_id_generator());
+            ids.line_breaks
+                .resize(ids.line_breaks.len() + 1, &mut ui.widget_id_generator());
             widget::Text::new("\n")
                 .parent(ids.body)
                 .set(*ids.line_breaks.last().unwrap(), ui);
         } else if state.main_body_array[i].code {
             if !state.main_body_array[i - 1].code && !state.main_body_array[i + 1].code {
-                ids.code_elements.resize(ids.code_elements.len()+1, &mut ui.widget_id_generator());
-                widget::Text::new(&state.main_body_array[i].text).parent(ids.body).set(*ids.code_elements.last().unwrap(), ui);
+                ids.code_elements
+                    .resize(ids.code_elements.len() + 1, &mut ui.widget_id_generator());
+                widget::Text::new(&state.main_body_array[i].text)
+                    .parent(ids.body)
+                    .set(*ids.code_elements.last().unwrap(), ui);
             } else {
-                ids.code_elements.resize(ids.code_elements.len()+1, &mut ui.widget_id_generator());
+                ids.code_elements
+                    .resize(ids.code_elements.len() + 1, &mut ui.widget_id_generator());
                 let mut code_text: String = state.main_body_array[i].text.clone();
                 while state.main_body_array[i + 1].code {
                     i += 1;
                     code_text.push_str(&state.main_body_array[i].text);
                 }
                 code_text.push_str("\n");
-                widget::Text::new(&code_text).parent(ids.body).set(*ids.code_elements.last().unwrap(), ui);
+                widget::Text::new(&code_text)
+                    .parent(ids.body)
+                    .set(*ids.code_elements.last().unwrap(), ui);
             }
         } else if state.main_body_array[i].link {
-            ids.link_elements.resize(ids.link_elements.len()+1, &mut ui.widget_id_generator());
-            if widget::Button::new().label(&state.main_body_array[i].text).parent(ids.body).set(*ids.link_elements.last().unwrap(), ui).was_clicked() {
+            ids.link_elements
+                .resize(ids.link_elements.len() + 1, &mut ui.widget_id_generator());
+            if widget::Button::new()
+                .label(&state.main_body_array[i].text)
+                .parent(ids.body)
+                .set(*ids.link_elements.last().unwrap(), ui)
+                .was_clicked()
+            {
                 state.url_to_get = state.main_body_array[i].url.clone();
                 navigation::go_to_page(state);
             }
         } else {
-            ids.text_elements.resize(ids.text_elements.len()+1, &mut ui.widget_id_generator());
-            widget::Text::new(&state.main_body_array[i].text).parent(ids.body).set(*ids.text_elements.last().unwrap(), ui);
+            ids.text_elements
+                .resize(ids.text_elements.len() + 1, &mut ui.widget_id_generator());
+            widget::Text::new(&state.main_body_array[i].text)
+                .parent(ids.body)
+                .set(*ids.text_elements.last().unwrap(), ui);
         }
         i += 1;
     }
 }
-/*
-fn show_go_url_window(ui: &Ui, state: &mut State) {
+
+fn show_go_url_window(ui: &mut conrod::UiCell, state: &mut State, ids: &mut Ids) {
+    widget::Text::new("Go To URL...")
+        .parent(ids.url_bar.canvas)
+        .set(ids.url_bar.title_text, ui);
+    for event in widget::TextBox::new(&state.url_to_get).set(ids.url_bar.input_box, ui) {
+        match event {
+            widget::text_box::Event::Enter => navigation::go_to_page(state),
+            widget::text_box::Event::Update(string) => state.url_to_get = string,
+        }
+    }
+    /*
     Window::new(im_str!("Go To URL..."))
         .size([0.0, 0.0], Condition::FirstUseEver)
         .always_auto_resize(true)
@@ -146,5 +190,5 @@ fn show_go_url_window(ui: &Ui, state: &mut State) {
                 navigation::go_to_page(state);
             }
         });
+        */
 }
-*/
