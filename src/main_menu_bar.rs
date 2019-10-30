@@ -1,14 +1,27 @@
-use imgui::*;
 use conrod::*;
 use std::process;
 
+use crate::conrod_ids::Ids;
 use crate::html;
 use crate::navigation;
-use crate::conrod_ids::Ids
 use crate::structs::{FileMenuState, State, WebpageType};
 
 pub fn show_app_main_menu_bar<'a>(ui: &mut UiCell, state: &mut State, ids: &mut Ids) {
-    widget::Tabs::new(&[(),(),(),()])
+    widget::Tabs::new(&[
+        (ids.menu_bar.file_menu.button, "File"),
+        (ids.menu_bar.view_menu.button, "View"),
+        (ids.menu_bar.link_menu.button, "Link"),
+        (ids.menu_bar.help_menu.button, "Help"),
+    ])
+    .parent(ids.menu_bar.canvas)
+    .label_color(color::WHITE)
+    .label_font_size(10)
+    .color(color::DARK_CHARCOAL)
+    .border(0.)
+    .w_h(300., ui.wh_of(ids.menu_bar.canvas).unwrap()[1])
+    .mid_left_of(ids.menu_bar.canvas)
+    .set(ids.menu_bar.tabs, ui);
+    /*
     if let Some(menu_bar) = ui.begin_main_menu_bar() {
         if let Some(menu) = ui.begin_menu(im_str!("File"), true) {
             show_main_menu_file(ui, state);
@@ -33,8 +46,9 @@ pub fn show_app_main_menu_bar<'a>(ui: &mut UiCell, state: &mut State, ids: &mut 
         ui.text(im_str!("{:}", state.window_title));
         menu_bar.end(ui);
     }
+    */
 }
-
+/*
 fn show_main_menu_file<'a>(ui: &Ui<'a>, state: &mut State) {
     if MenuItem::new(im_str!("Go to URL"))
         .shortcut(im_str!("Ctrl+G"))
@@ -138,3 +152,4 @@ fn show_main_menu_help<'a>(ui: &Ui<'a>) {
         .shortcut(im_str!("F1"))
         .build(ui);
 }
+*/

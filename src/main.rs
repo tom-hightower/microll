@@ -2,17 +2,18 @@ extern crate conrod;
 extern crate rand;
 
 use conrod::{
-    color, position, widget, Borderable, Colorable, Labelable, Positionable, Sizeable, Widget, UiCell
+    color, position, widget, Borderable, Colorable, Labelable, Positionable, Sizeable, UiCell,
+    Widget,
 };
 
 #[macro_use]
 mod macros;
+mod conrod_ids;
 mod html;
 mod http;
-//mod main_menu_bar;
+mod main_menu_bar;
 mod navigation;
 mod structs;
-mod conrod_ids;
 mod support;
 
 use conrod_ids::Ids;
@@ -40,42 +41,40 @@ fn main() {
 
 fn show_main_app(ui: &mut UiCell, state: &mut State, ids: &mut Ids) {
     let master_flowdown;
+    let body = (
+        ids.body,
+        widget::Canvas::new().color(color::CHARCOAL).border(0.),
+    );
+    let menu_bar = (
+        ids.menu_bar.canvas,
+        widget::Canvas::new()
+            .color(color::DARK_CHARCOAL)
+            .length(20.)
+            .border(0.),
+    );
     if state.show_app_main_menu_bar {
         if state.sub_windows.go_to_link {
             master_flowdown = vec![
-                (
-                    ids.menu_bar.canvas,
-                    widget::Canvas::new()
-                        .color(color::DARK_CHARCOAL)
-                        .length(20.),
-                ),
+                menu_bar,
                 (
                     ids.url_bar.canvas,
                     widget::Canvas::new()
                         .color(color::DARK_CHARCOAL)
                         .length(30.),
                 ),
-                (ids.body, widget::Canvas::new().color(color::CHARCOAL)),
+                body,
             ];
         } else {
-            master_flowdown = vec![
-                (
-                    ids.menu_bar.canvas,
-                    widget::Canvas::new()
-                        .color(color::DARK_CHARCOAL)
-                        .length(20.),
-                ),
-                (ids.body, widget::Canvas::new().color(color::CHARCOAL)),
-            ];
+            master_flowdown = vec![menu_bar, body];
         }
     } else {
-        master_flowdown = vec![(ids.body, widget::Canvas::new().color(color::CHARCOAL))];
+        master_flowdown = vec![body];
     }
     widget::Canvas::new()
         .flow_down(&master_flowdown)
         .set(ids.master, ui);
     if state.show_app_main_menu_bar {
-        //main_menu_bar::show_app_main_menu_bar(ui, state, dimensions);
+        main_menu_bar::show_app_main_menu_bar(ui, state, ids);
         if state.sub_windows.go_to_link {
             show_go_url_window(ui, state, ids);
         }

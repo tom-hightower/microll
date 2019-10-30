@@ -31,6 +31,7 @@ impl Ids {
 
 pub struct MenuBarIds {
     pub canvas: conrod::widget::Id,
+    pub tabs: conrod::widget::Id,
     pub file_menu: ListButton,
     pub view_menu: ListButton,
     pub link_menu: ListButton,
@@ -41,6 +42,7 @@ impl MenuBarIds {
     fn new(mut generator: &mut conrod::widget::id::Generator) -> Self {
         MenuBarIds {
             canvas: generator.next(),
+            tabs: generator.next(),
             file_menu: ListButton::new(&mut generator),
             view_menu: ListButton::new(&mut generator),
             link_menu: ListButton::new(&mut generator),
