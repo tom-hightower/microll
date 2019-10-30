@@ -2,16 +2,15 @@
 name = "microll"
 version = "0.1.0"
 authors = ["Tom Hightower <tom.hightower356@gmail.com>"]
+description = "A text-based web browser written in Rust"
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-glium = { version = "0.25", default-features = true } # same as in imgui master branch
-imgui = "0.2.1"
-imgui-glium-renderer = "0.2.0"
-imgui-winit-support = "0.2.1"
-clipboard = "0.5"
+conrod = { version = "0.61", features = ["glium", "winit"] }
 
+clipboard = "0.5"
 reqwest = "0.9"
 nfd = "0.0.4"
+rand = "*"

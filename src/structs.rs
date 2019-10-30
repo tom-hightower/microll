@@ -1,10 +1,9 @@
-use imgui::ImString;
 use std::collections::HashMap;
 
 pub struct State {
     pub show_app_main_menu_bar: bool,
     pub file_menu: FileMenuState,
-    pub url_to_get: ImString,
+    pub url_to_get: String,
     pub root_url: String,
     pub main_body_array: Vec<RenderItem>,
     pub sub_windows: SubWindowVisibility,
@@ -18,13 +17,47 @@ impl<'a> Default for State {
         State {
             show_app_main_menu_bar: true,
             file_menu: Default::default(),
-            url_to_get: ImString::new("https://adriann.github.io/rust_parser.html"),
+            url_to_get: string!("https://adriann.github.io/rust_parser.html"),
             root_url: string!(""),
             main_body_array: vec![RenderItem::new()],
             sub_windows: Default::default(),
             window_title: String::from("Microll"),
             history: hashmap![string!("Microll: The Text-Based Web Browser") => WebpageFinder::create(WebpageType::Preload, string!("microll"))],
             preloaded_pages: hashmap![string!("microll") => string!("microll.html")],
+        }
+    }
+}
+
+pub struct Ids {
+    pub master: conrod::widget::Id,
+    pub menu_bar: conrod::widget::Id,
+    pub body: conrod::widget::Id,
+    pub btn: conrod::widget::Id,
+    pub text: conrod::widget::Id,
+    pub auto_btn: conrod::widget::Id,
+    pub file_load_btn: conrod::widget::Id,
+    pub page_load_btn: conrod::widget::Id,
+    pub line_breaks: conrod::widget::id::List,
+    pub code_elements: conrod::widget::id::List,
+    pub text_elements: conrod::widget::id::List,
+    pub link_elements: conrod::widget::id::List,
+}
+
+impl Ids {
+    pub fn new(mut generator: conrod::widget::id::Generator) -> Self {
+        Ids {
+            master: generator.next(),
+            menu_bar: generator.next(),
+            body: generator.next(),
+            btn: generator.next(),
+            text: generator.next(),
+            auto_btn: generator.next(),
+            file_load_btn: generator.next(),
+            page_load_btn: generator.next(),
+            line_breaks: conrod::widget::id::List::new(),
+            code_elements: conrod::widget::id::List::new(),
+            text_elements: conrod::widget::id::List::new(),
+            link_elements: conrod::widget::id::List::new(),
         }
     }
 }

@@ -8,7 +8,7 @@ use nfd::Response;
 
 pub fn go_to_page(state: &mut State) {
     let html_text;
-    match http::get_text(&String::from(state.url_to_get.to_str().to_owned()), state) {
+    match http::get_text(&state.url_to_get.to_owned(), state) {
         Ok((text, url)) => {
             html_text = text;
             let parsed = html::parse_html(&html_text);
