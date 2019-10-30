@@ -2,7 +2,7 @@ extern crate conrod;
 extern crate rand;
 
 use conrod::{
-    color, position, widget, Borderable, Colorable, Labelable, Positionable, Sizeable, Widget,
+    color, position, widget, Borderable, Colorable, Labelable, Positionable, Sizeable, Widget, UiCell
 };
 
 #[macro_use]
@@ -12,9 +12,11 @@ mod http;
 //mod main_menu_bar;
 mod navigation;
 mod structs;
+mod conrod_ids;
 mod support;
 
-use structs::{Ids, State};
+use conrod_ids::Ids;
+use structs::State;
 
 fn main() {
     let mut system = support::init("Microll");
@@ -36,13 +38,13 @@ fn main() {
     }
 }
 
-fn show_main_app(ui: &mut conrod::UiCell, state: &mut State, ids: &mut Ids) {
+fn show_main_app(ui: &mut UiCell, state: &mut State, ids: &mut Ids) {
     let master_flowdown;
     if state.show_app_main_menu_bar {
         if state.sub_windows.go_to_link {
             master_flowdown = vec![
                 (
-                    ids.menu_bar,
+                    ids.menu_bar.canvas,
                     widget::Canvas::new()
                         .color(color::DARK_CHARCOAL)
                         .length(20.),
@@ -58,7 +60,7 @@ fn show_main_app(ui: &mut conrod::UiCell, state: &mut State, ids: &mut Ids) {
         } else {
             master_flowdown = vec![
                 (
-                    ids.menu_bar,
+                    ids.menu_bar.canvas,
                     widget::Canvas::new()
                         .color(color::DARK_CHARCOAL)
                         .length(20.),
@@ -81,7 +83,7 @@ fn show_main_app(ui: &mut conrod::UiCell, state: &mut State, ids: &mut Ids) {
     show_main_app_window(ui, state, ids);
 }
 
-fn show_main_app_window(ui: &mut conrod::UiCell, state: &mut State, ids: &mut Ids) {
+fn show_main_app_window(ui: &mut UiCell, state: &mut State, ids: &mut Ids) {
     if widget::Button::new()
         .parent(ids.body)
         .label("Load Webpage")
@@ -114,7 +116,7 @@ fn show_main_app_window(ui: &mut conrod::UiCell, state: &mut State, ids: &mut Id
     build_webpage(ui, state, ids);
 }
 
-fn build_webpage(ui: &mut conrod::UiCell, state: &mut State, ids: &mut Ids) {
+fn build_webpage(ui: &mut UiCell, state: &mut State, ids: &mut Ids) {
     let mut i: usize = 0;
     while i < state.main_body_array.len() {
         if state.main_body_array[i].title {
@@ -168,7 +170,7 @@ fn build_webpage(ui: &mut conrod::UiCell, state: &mut State, ids: &mut Ids) {
     }
 }
 
-fn show_go_url_window(ui: &mut conrod::UiCell, state: &mut State, ids: &mut Ids) {
+fn show_go_url_window(ui: &mut UiCell, state: &mut State, ids: &mut Ids) {
     widget::Text::new("Go To URL...")
         .parent(ids.url_bar.canvas)
         .mid_left_of(ids.url_bar.canvas)

@@ -1,11 +1,14 @@
 use imgui::*;
+use conrod::*;
 use std::process;
 
 use crate::html;
 use crate::navigation;
+use crate::conrod_ids::Ids
 use crate::structs::{FileMenuState, State, WebpageType};
 
-pub fn show_app_main_menu_bar<'a>(ui: &Ui<'a>, state: &mut State, dimensions: (u32, u32)) {
+pub fn show_app_main_menu_bar<'a>(ui: &mut UiCell, state: &mut State, ids: &mut Ids) {
+    widget::Tabs::new(&[(),(),(),()])
     if let Some(menu_bar) = ui.begin_main_menu_bar() {
         if let Some(menu) = ui.begin_menu(im_str!("File"), true) {
             show_main_menu_file(ui, state);
