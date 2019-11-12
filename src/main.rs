@@ -113,6 +113,8 @@ fn show_main_app_window(ui: &mut UiCell, state: &mut State, ids: &mut Ids) {
         state.main_body_array = html::parse_html(&state.preloaded_pages["microll"]).0;
     }
     build_webpage(ui, state, ids);
+
+    //widget::Scrollbar;
 }
 
 fn build_webpage(ui: &mut UiCell, state: &mut State, ids: &mut Ids) {

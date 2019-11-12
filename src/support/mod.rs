@@ -131,8 +131,8 @@ pub fn handle_events(system: &mut System) -> bool {
 
         match event {
             glutin::Event::WindowEvent { event, .. } => match event {
-                glutin::WindowEvent::CloseRequested |
-                glutin::WindowEvent::KeyboardInput {
+                glutin::WindowEvent::CloseRequested
+                | glutin::WindowEvent::KeyboardInput {
                     input:
                         glutin::KeyboardInput {
                             virtual_keycode: Some(glutin::VirtualKeyCode::Escape),
