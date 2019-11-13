@@ -1,51 +1,38 @@
-use conrod::*;
+use imgui::*;
 use std::process;
 
-use crate::conrod_ids::Ids;
 use crate::html;
 use crate::navigation;
 use crate::structs::{FileMenuState, State, WebpageType};
 
-pub fn show_app_main_menu_bar<'a>(ui: &mut UiCell, state: &mut State, ids: &mut Ids) {
-    widget::Tabs::new(&[
-        (ids.menu_bar.file_menu.button, "File"),
-        (ids.menu_bar.view_menu.button, "View"),
-        (ids.menu_bar.link_menu.button, "Link"),
-        (ids.menu_bar.help_menu.button, "Help"),
-    ])
-    .parent(ids.menu_bar.canvas)
-    .label_color(color::WHITE)
-    .label_font_size(10)
-    .color(color::DARK_CHARCOAL)
-    .border(0.)
-    .w_h(300., ui.wh_of(ids.menu_bar.canvas).unwrap()[1])
-    .mid_left_of(ids.menu_bar.canvas)
-    .set(ids.menu_bar.tabs, ui);
-
-    if is_tab_clicked(ui, ids.menu_bar.file_menu.button) {
-        show_main_menu_file(ui, state, ids);
+pub fn show_app_main_menu_bar<'a>(ui: &Ui<'a>, state: &mut State, dimensions: (u32, u32)) {
+    if let Some(menu_bar) = ui.begin_main_menu_bar() {
+        if let Some(menu) = ui.begin_menu(im_str!("File"), true) {
+            show_main_menu_file(ui, state);
+            menu.end(ui);
+        }
+        if let Some(menu) = ui.begin_menu(im_str!("View"), true) {
+            show_main_menu_view(ui, &mut state.file_menu);
+            menu.end(ui);
+        }
+        if let Some(menu) = ui.begin_menu(im_str!("Link"), true) {
+            show_main_menu_link(ui);
+            menu.end(ui);
+        }
+        if let Some(menu) = ui.begin_menu(im_str!("Help"), true) {
+            show_main_menu_help(ui);
+            menu.end(ui);
+        }
+        ui.same_line(
+            (dimensions.0 as f32)
+                - (ui.calc_text_size(&im_str!("{:}", state.window_title), false, 0.)[0] + 20.),
+        );
+        ui.text(im_str!("{:}", state.window_title));
+        menu_bar.end(ui);
     }
-
-    if is_tab_clicked(ui, ids.menu_bar.view_menu.button) {
-        show_main_menu_view(ui, state, ids);
-    }
-
-    if is_tab_clicked(ui, ids.menu_bar.link_menu.button) {
-        show_main_menu_link(ui, state, ids);
-    }
-
-    if is_tab_clicked(ui, ids.menu_bar.help_menu.button) {
-        show_main_menu_help(ui, state, ids);
-    }
-
-    widget::Text::new(&state.window_title)
-        .parent(ids.url_bar.canvas)
-        .mid_right_of(ids.menu_bar.canvas)
-        .set(ids.menu_bar.cur_page, ui);
 }
 
-fn show_main_menu_file<'a>(ui: &mut UiCell, state: &mut State, ids: &mut Ids) {
-    /*
+fn show_main_menu_file<'a>(ui: &Ui<'a>, state: &mut State) {
     if MenuItem::new(im_str!("Go to URL"))
         .shortcut(im_str!("Ctrl+G"))
         .build(ui)
@@ -108,11 +95,9 @@ fn show_main_menu_file<'a>(ui: &mut UiCell, state: &mut State, ids: &mut Ids) {
     {
         process::exit(0x0000);
     }
-    */
 }
 
-fn show_main_menu_view<'a>(ui: &mut UiCell, state: &mut State, ids: &mut Ids) {
-    /*
+fn show_main_menu_view<'a>(ui: &Ui<'a>, file_menu_state: &mut FileMenuState) {
     MenuItem::new(im_str!("Search"))
         .enabled(file_menu_state.can_search)
         .shortcut(im_str!("/"))
@@ -130,11 +115,9 @@ fn show_main_menu_view<'a>(ui: &mut UiCell, state: &mut State, ids: &mut Ids) {
         .build(ui);
     ui.separator();
     MenuItem::new(im_str!("HTML Options")).build(ui);
-    */
 }
 
-fn show_main_menu_link<'a>(ui: &mut UiCell, state: &mut State, ids: &mut Ids) {
-    /*
+fn show_main_menu_link<'a>(ui: &Ui<'a>) {
     MenuItem::new(im_str!("Follow Link"))
         .shortcut(im_str!("Right"))
         .build(ui);
@@ -145,17 +128,10 @@ fn show_main_menu_link<'a>(ui: &mut UiCell, state: &mut State, ids: &mut Ids) {
     MenuItem::new(im_str!("Open in New Background Tab")).build(ui);
     ui.separator();
     MenuItem::new(im_str!("Download Link")).build(ui);
-    */
 }
 
-fn show_main_menu_help<'a>(ui: &mut UiCell, state: &mut State, ids: &mut Ids) {
-    /*
-        MenuItem::new(im_str!("Help"))
-            .shortcut(im_str!("F1"))
-            .build(ui);
-    */
-}
-
-fn is_tab_clicked(ui: &mut UiCell, id: widget::Id) -> bool {
-    ui.widget_input(id).clicks().right().count() != 0
+fn show_main_menu_help<'a>(ui: &Ui<'a>) {
+    MenuItem::new(im_str!("Help"))
+        .shortcut(im_str!("F1"))
+        .build(ui);
 }

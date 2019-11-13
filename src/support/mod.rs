@@ -1,149 +1,127 @@
-use conrod;
+use glium::glutin::{self, Event, WindowEvent};
+use glium::{Display, Surface};
+use imgui::{Context, FontConfig, FontGlyphRanges, FontSource, Ui};
+use imgui_glium_renderer::Renderer;
+use imgui_winit_support::{HiDpiMode, WinitPlatform};
+use std::time::Instant;
 
-use std::{
-    thread,
-    time::{Duration, Instant},
-};
+mod clipboard;
 
-use conrod::{
-    backend::glium::glium::{self, glutin, Surface},
-    text::Font,
-};
-
-const WIN_W: u32 = 1024;
-const WIN_H: u32 = 768;
-
-pub struct EventLoop {
-    last_update: Instant,
-    ui_needs_update: bool,
-}
-
-impl EventLoop {
-    pub fn new() -> Self {
-        EventLoop {
-            last_update: Instant::now(),
-            ui_needs_update: true,
-        }
-    }
-
-    pub fn next(
-        &mut self,
-        events_loop: &mut glium::glutin::EventsLoop,
-    ) -> Vec<glium::glutin::Event> {
-        let last_update = self.last_update;
-        let sixteen_ms = Duration::from_millis(16);
-        let duration_since_last_update = Instant::now().duration_since(last_update);
-        if duration_since_last_update < sixteen_ms {
-            thread::sleep(sixteen_ms - duration_since_last_update);
-        }
-        let mut events = vec![];
-        events_loop.poll_events(|event| events.push(event));
-
-        if events.is_empty() && !self.ui_needs_update {
-            events_loop.run_forever(|event| {
-                events.push(event);
-                glutin::ControlFlow::Break
-            });
-        }
-
-        self.ui_needs_update = false;
-        self.last_update = Instant::now();
-
-        events
-    }
-
-    pub fn needs_update(&mut self) {
-        self.ui_needs_update = true;
-    }
-}
+// TODO: Consider visibility of System struct members; rather than making them public.
+// consider adding specific accessor methods w/ proper error handling
 
 pub struct System {
     pub events_loop: glutin::EventsLoop,
-    pub event_loop: EventLoop,
     pub display: glium::Display,
-    pub ui: conrod::Ui,
-    pub image_map: conrod::image::Map<glium::texture::Texture2d>,
-    pub renderer: conrod::backend::glium::Renderer,
+    pub imgui: Context,
+    pub platform: WinitPlatform,
+    pub renderer: Renderer,
+    pub font_size: f32,
+}
+
+// TODO: Functions like this generally wrap `System` in a Result<T,E> for proper error-handling
+pub fn init(title: &str) -> System {
+    let title = match title.rfind('/') {
+        Some(idx) => title.split_at(idx + 1).1,
+        None => title,
+    };
+    let events_loop = glutin::EventsLoop::new();
+    let context = glutin::ContextBuilder::new().with_vsync(true);
+    let builder = glutin::WindowBuilder::new()
+        .with_title(title.to_owned())
+        .with_dimensions(glutin::dpi::LogicalSize::new(1024f64, 768f64));
+    let display =
+        Display::new(builder, context, &events_loop).expect("Failed to initialize display");
+
+    let mut imgui = Context::create();
+    imgui.set_ini_filename(None);
+
+    if let Some(backend) = clipboard::init() {
+        imgui.set_clipboard_backend(Box::new(backend));
+    } else {
+        eprintln!("Failed to initialize clipboard");
+    }
+
+    let mut platform = WinitPlatform::init(&mut imgui);
+    {
+        let gl_window = display.gl_window();
+        let window = gl_window.window();
+        platform.attach_window(imgui.io_mut(), &window, HiDpiMode::Rounded);
+    }
+
+    let hidpi_factor = platform.hidpi_factor();
+    let font_size = (13.0 * hidpi_factor) as f32;
+    imgui.fonts().add_font(&[
+        FontSource::DefaultFontData {
+            config: Some(FontConfig {
+                size_pixels: font_size,
+                ..FontConfig::default()
+            }),
+        },
+        FontSource::TtfData {
+            data: include_bytes!("../../resources/asimov.ttf"),
+            size_pixels: font_size,
+            config: Some(FontConfig {
+                rasterizer_multiply: 1.75,
+                glyph_ranges: FontGlyphRanges::japanese(),
+                ..FontConfig::default()
+            }),
+        },
+    ]);
+
+    imgui.io_mut().font_global_scale = (1.0 / hidpi_factor) as f32;
+
+    let renderer = Renderer::init(&mut imgui, &display).expect("Failed to initialize renderer");
+
+    System {
+        events_loop,
+        display,
+        imgui,
+        platform,
+        renderer,
+        font_size,
+    }
 }
 
 impl System {
-    pub fn create(
-        events_loop: glutin::EventsLoop,
-        event_loop: EventLoop,
-        display: glium::Display,
-        ui: conrod::Ui,
-        image_map: conrod::image::Map<glium::texture::Texture2d>,
-        renderer: conrod::backend::glium::Renderer,
-    ) -> Self {
-        System {
-            events_loop,
-            event_loop,
-            display,
-            ui,
-            image_map,
-            renderer,
+    // main_loop will mutate System object calling it
+    // modify mutably captured close `FnMut` to take 2-tuple of u32, representing dimension
+    pub fn main_loop<F: FnMut(&mut bool, &mut Ui, (u32, u32))>(&mut self, mut run_ui: F) {
+        let events_loop = &mut self.events_loop;
+        let imgui = &mut self.imgui;
+        let platform = &mut self.platform;
+        let renderer = &mut self.renderer;
+        let gl_window = self.display.gl_window();
+        let window = gl_window.window();
+        let mut last_frame = Instant::now();
+        let mut run = true;
+
+        while run {
+            events_loop.poll_events(|event| {
+                platform.handle_event(imgui.io_mut(), &window, &event);
+                if let Event::WindowEvent { event, .. } = event {
+                    if let WindowEvent::CloseRequested = event {
+                        run = false;
+                    }
+                }
+            });
+
+            let io = imgui.io_mut();
+            platform
+                .prepare_frame(io, &window)
+                .expect("Failed to start frame");
+            last_frame = io.update_delta_time(last_frame);
+            let mut ui = imgui.frame();
+            // Pass dimension here
+            run_ui(&mut run, &mut ui, self.display.get_framebuffer_dimensions());
+            let mut target = self.display.draw();
+            target.clear_color_srgb(1.0, 1.0, 1.0, 1.0);
+            platform.prepare_render(&ui, &window);
+            let draw_data = ui.render();
+            renderer
+                .render(&mut target, draw_data)
+                .expect("Rendering failed");
+            target.finish().expect("Failed to swap buffers");
         }
     }
-}
-
-pub fn init(title: &str) -> System {
-    let events_loop = glutin::EventsLoop::new();
-    let window_builder = glutin::WindowBuilder::new()
-        .with_title(title)
-        .with_dimensions(glutin::dpi::LogicalSize::new(WIN_W as f64, WIN_H as f64));
-    let context_builder = glutin::ContextBuilder::new()
-        .with_vsync(true)
-        .with_multisampling(4);
-    let display = glium::Display::new(window_builder, context_builder, &events_loop).unwrap();
-
-    let mut ui = conrod::UiBuilder::new([WIN_W as f64, WIN_H as f64]).build();
-    let font_data: &[u8] = include_bytes!("../../resources/asimov.ttf");
-    ui.fonts.insert(Font::from_bytes(font_data).unwrap());
-
-    let event_loop = EventLoop::new();
-    let image_map = conrod::image::Map::<glium::texture::Texture2d>::new();
-    let renderer = conrod::backend::glium::Renderer::new(&display).unwrap();
-
-    return System::create(events_loop, event_loop, display, ui, image_map, renderer);
-}
-
-pub fn render(system: &mut System) {
-    if let Some(primitives) = system.ui.draw_if_changed() {
-        system
-            .renderer
-            .fill(&system.display, primitives, &system.image_map);
-        let mut target = system.display.draw();
-        target.clear_color(1., 1., 1., 1.);
-        system
-            .renderer
-            .draw(&system.display, &mut target, &system.image_map)
-            .unwrap();
-        target.finish().unwrap();
-    }
-}
-
-pub fn handle_events(system: &mut System) -> bool {
-    for event in system.event_loop.next(&mut system.events_loop) {
-        if let Some(event) = conrod::backend::winit::convert_event(event.clone(), &system.display) {
-            system.ui.handle_event(event);
-            system.event_loop.needs_update();
-        }
-
-        match event {
-            glutin::Event::WindowEvent { event, .. } => match event {
-                glutin::WindowEvent::CloseRequested
-                | glutin::WindowEvent::KeyboardInput {
-                    input:
-                        glutin::KeyboardInput {
-                            virtual_keycode: Some(glutin::VirtualKeyCode::Escape),
-                            ..
-                        },
-                    ..
-                } => return true,
-                _ => (),
-            },
-            _ => (),
-        }
-    }
-    false
 }
