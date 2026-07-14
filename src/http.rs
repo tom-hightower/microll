@@ -1,35 +1,21 @@
-extern crate reqwest;
 use crate::structs::State;
 
-pub fn get_text(url: &String, state: &mut State) -> Result<(String, String), reqwest::Error> {
-    let body = match reqwest::blocking::get(url) {
-        Ok(resp) => {
-            let last_dot: usize = match url.rfind('.') {
-                Some(idx) => idx,
-                _ => 0,
-            };
-            let first_slash: usize = match url[last_dot..].find('/') {
-                Some(idx) => idx + last_dot,
-                _ => url.len(),
-            };
-            state.root_url = string!(&url[..first_slash]);
-            resp.text()?
+pub fn get_text(url: &str, state: &mut State) -> Result<(String, String), reqwest::Error> {
+    // Use the last site root for relative paths
+    if reqwest::Url::parse(url).is_err() {
+        let mut new_url: String = state.root_url.clone();
+        new_url.push('/');
+        new_url.push_str(url.strip_prefix('/').unwrap_or(url));
+        if new_url != url {
+            return get_text(&new_url, state);
         }
-        Err(e) => {
-            if e.is_builder() && format!("{:?}", e).contains("RelativeUrlWithoutBase") {
-                let mut new_url: String = state.root_url.clone();
-                new_url.push('/');
-                if url.starts_with('/') {
-                    new_url.push_str(&url[1..])
-                } else {
-                    new_url.push_str(url);
-                }
-                return get_text(&new_url, state);
-            } else {
-                println!("Error: {}", e);
-                std::panic::panic_any(e)
-            }
-        }
+    }
+    let resp = reqwest::blocking::get(url)?;
+    let last_dot: usize = url.rfind('.').unwrap_or(0);
+    let first_slash: usize = match url[last_dot..].find('/') {
+        Some(idx) => idx + last_dot,
+        None => url.len(),
     };
-    Ok((body, url.clone()))
+    state.root_url = String::from(&url[..first_slash]);
+    Ok((resp.text()?, url.to_string()))
 }

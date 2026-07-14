@@ -5,7 +5,7 @@ use crate::structs::RenderState;
 use std::collections::HashMap;
 use std::str;
 
-fn larse(input_u8: &Vec<u8>, begin: usize) -> Result<(Vec<ParseNode>, usize), String> {
+fn larse(input_u8: &[u8], begin: usize) -> Result<(Vec<ParseNode>, usize), String> {
     let mut result = Vec::new();
     let mut i: usize = begin;
     'outer: while i < input_u8.len() {
@@ -20,21 +20,21 @@ fn larse(input_u8: &Vec<u8>, begin: usize) -> Result<(Vec<ParseNode>, usize), St
                         let start: usize = i - 1;
                         // Collect tag text and match it to a known tag
                         while !is_whitespace(input_u8[buf_pos])
-                            && (input_u8[buf_pos] != '>' as u8)
-                            && (input_u8[buf_pos] != '/' as u8)
+                            && (input_u8[buf_pos] != b'>')
+                            && (input_u8[buf_pos] != b'/')
                         {
                             tag.push(input_u8[buf_pos]);
                             buf_pos += 1;
                         }
                         let html_tag = match_tag(tag.clone());
                         let mut attributes: HashMap<String, String> = HashMap::new();
-                        if (input_u8[buf_pos] != '>' as u8)
+                        if (input_u8[buf_pos] != b'>')
                             && (html_tag != HTMLToken::Comment)
                             && (html_tag != HTMLToken::DocType)
                         {
                             // Find tag attributes
-                            let mut attr_name: String = string!("");
-                            let mut attr_val: String = string!("");
+                            let mut attr_name: String = String::new();
+                            let mut attr_val: String = String::new();
                             let mut is_name: bool = true;
                             buf_pos += 1;
                             while (buf_pos < input_u8.len()) && not_close_of_open(input_u8, buf_pos)
@@ -44,12 +44,12 @@ fn larse(input_u8: &Vec<u8>, begin: usize) -> Result<(Vec<ParseNode>, usize), St
                                     ' ' | '\t' | '\r' | '\n' => {
                                         if is_quote(input_u8, buf_pos - 1) {
                                             attributes.insert(attr_name, attr_val);
-                                            attr_name = string!("");
-                                            attr_val = string!("");
+                                            attr_name = String::new();
+                                            attr_val = String::new();
                                             is_name = true;
                                         } else {
                                             if is_name {
-                                                if attr_name != "".to_string() {
+                                                if !attr_name.is_empty() {
                                                     if attr_val.len() > 3 {
                                                         attributes.insert(
                                                             attr_name,
@@ -59,8 +59,8 @@ fn larse(input_u8: &Vec<u8>, begin: usize) -> Result<(Vec<ParseNode>, usize), St
                                                     } else {
                                                         attributes.insert(attr_name, attr_val);
                                                     }
-                                                    attr_name = string!("");
-                                                    attr_val = string!("");
+                                                    attr_name = String::new();
+                                                    attr_val = String::new();
                                                 }
                                             } else {
                                                 attr_val.push(input_u8[buf_pos] as char);
@@ -77,7 +77,7 @@ fn larse(input_u8: &Vec<u8>, begin: usize) -> Result<(Vec<ParseNode>, usize), St
                                 }
                                 buf_pos += 1;
                             }
-                            if attr_name != "".to_string() {
+                            if !attr_name.is_empty() {
                                 if attr_val.len() > 3 {
                                     attributes.insert(
                                         attr_name,
@@ -89,7 +89,7 @@ fn larse(input_u8: &Vec<u8>, begin: usize) -> Result<(Vec<ParseNode>, usize), St
                             }
                         }
                         if buf_pos < input_u8.len() {
-                            if input_u8[buf_pos] == '/' as u8 || html_tag == HTMLToken::VOID {
+                            if input_u8[buf_pos] == b'/' || html_tag == HTMLToken::Void {
                                 // self closing tag
                                 let node = ParseNode::create(
                                     Vec::new(),
@@ -100,7 +100,7 @@ fn larse(input_u8: &Vec<u8>, begin: usize) -> Result<(Vec<ParseNode>, usize), St
                                     buf_pos + 1,
                                 );
                                 result.push(node);
-                                if input_u8[buf_pos] == '/' as u8 {
+                                if input_u8[buf_pos] == b'/' {
                                     i = buf_pos + 2;
                                 } else {
                                     i = buf_pos + 1;
@@ -114,7 +114,7 @@ fn larse(input_u8: &Vec<u8>, begin: usize) -> Result<(Vec<ParseNode>, usize), St
                                 i = buf_pos + 3;
                             } else if html_tag == HTMLToken::DocType {
                                 // No closing tag, skip
-                                while !(input_u8[buf_pos] == '>' as u8) {
+                                while !(input_u8[buf_pos] == b'>') {
                                     buf_pos += 1
                                 }
                                 i = buf_pos + 1
@@ -141,12 +141,12 @@ fn larse(input_u8: &Vec<u8>, begin: usize) -> Result<(Vec<ParseNode>, usize), St
                                     && !is_closing_tag(input_u8, buf_pos, &tag)
                                     && !list_item_no_close(input_u8, buf_pos, &tag, &html_tag)
                                 {
-                                    if input_u8[buf_pos] != '<' as u8
+                                    if input_u8[buf_pos] != b'<'
                                         || html_tag == HTMLToken::Script
                                     {
                                         text.push(input_u8[buf_pos]);
                                     } else {
-                                        if text != Vec::<u8>::new() {
+                                        if !text.is_empty() {
                                             let node = ParseNode::create(
                                                 Vec::new(),
                                                 HTMLToken::Text,
@@ -158,7 +158,7 @@ fn larse(input_u8: &Vec<u8>, begin: usize) -> Result<(Vec<ParseNode>, usize), St
                                             children.push(node);
                                             text = Vec::<u8>::new();
                                         }
-                                        match larse(&input_u8, buf_pos) {
+                                        match larse(input_u8, buf_pos) {
                                             Ok((new_childs, new_pos)) => {
                                                 buf_pos = new_pos - 2;
                                                 start_text = buf_pos;
@@ -171,7 +171,7 @@ fn larse(input_u8: &Vec<u8>, begin: usize) -> Result<(Vec<ParseNode>, usize), St
                                     }
                                     buf_pos += 1;
                                 }
-                                if text != "".as_bytes().to_vec() {
+                                if !text.is_empty() {
                                     let node = ParseNode::create(
                                         Vec::new(),
                                         HTMLToken::Text,
@@ -186,7 +186,7 @@ fn larse(input_u8: &Vec<u8>, begin: usize) -> Result<(Vec<ParseNode>, usize), St
                                     buf_pos = eat_whitespace(input_u8, buf_pos, Some(true));
                                 } else {
                                     while (buf_pos < input_u8.len())
-                                        && input_u8[buf_pos] != '>' as u8
+                                        && input_u8[buf_pos] != b'>'
                                     {
                                         buf_pos += 1
                                     }
@@ -245,38 +245,37 @@ fn match_tag(tag: Vec<u8>) -> HTMLToken {
         return HTMLToken::Comment;
     }
     match tag_str.to_uppercase().as_str() {
-        "HTML" => return HTMLToken::HtmlStart,
-        "HEAD" => return HTMLToken::Head,
-        "A" => return HTMLToken::HyperLink,
-        "B" | "STRONG" => return HTMLToken::BoldText,
-        "BODY" => return HTMLToken::Body,
-        "BR" | "WBR" | "HR" => return HTMLToken::LineBreak,
-        "CODE" => return HTMLToken::Code,
-        "DIV" => return HTMLToken::DivSection,
-        "H1" | "H2" | "H3" | "H4" | "H5" | "H6" => return HTMLToken::Heading,
-        "I" | "EM" => return HTMLToken::ItalicText,
-        "LI" => return HTMLToken::ListItem,
-        "OL" => return HTMLToken::OrderedList,
-        "P" => return HTMLToken::Paragraph,
-        "SCRIPT" => return HTMLToken::Script,
-        "SPAN" => return HTMLToken::Span,
-        "TITLE" => return HTMLToken::PageTitle,
-        "UL" => return HTMLToken::UnorderedList,
-        "!DOCTYPE" => return HTMLToken::DocType,
+        "HTML" => HTMLToken::HtmlStart,
+        "HEAD" => HTMLToken::Head,
+        "A" => HTMLToken::HyperLink,
+        "B" | "STRONG" => HTMLToken::BoldText,
+        "BODY" => HTMLToken::Body,
+        "BR" | "WBR" | "HR" => HTMLToken::LineBreak,
+        "CODE" => HTMLToken::Code,
+        "DIV" => HTMLToken::DivSection,
+        "H1" | "H2" | "H3" | "H4" | "H5" | "H6" => HTMLToken::Heading,
+        "I" | "EM" => HTMLToken::ItalicText,
+        "LI" => HTMLToken::ListItem,
+        "OL" => HTMLToken::OrderedList,
+        "P" => HTMLToken::Paragraph,
+        "SCRIPT" => HTMLToken::Script,
+        "SPAN" => HTMLToken::Span,
+        "TITLE" => HTMLToken::PageTitle,
+        "UL" => HTMLToken::UnorderedList,
+        "!DOCTYPE" => HTMLToken::DocType,
         "AREA" | "BASE" | "COL" | "COMMAND" | "EMBED" | "IMG" | "INPUT" | "KEYGEN" | "LINK"
-        | "META" | "PARAM" | "SOURCE" | "TRACK" | "PATH" => return HTMLToken::VOID,
-        _ => return HTMLToken::Unknown,
+        | "META" | "PARAM" | "SOURCE" | "TRACK" | "PATH" => HTMLToken::Void,
+        _ => HTMLToken::Unknown,
     }
 }
 
-pub fn parse_html(html: &String) -> (Vec<RenderItem>, String) {
+pub fn parse_html(html: &str) -> (Vec<RenderItem>, String) {
     let mut root = ParseNode::new();
-    root.tag = HTMLToken::ROOT;
+    root.tag = HTMLToken::Root;
     root.start_ind = 0;
     root.end_ind = html.len();
-    let html_vec = html.as_bytes().to_vec();
     let result;
-    match larse(&html_vec, 0) {
+    match larse(html.as_bytes(), 0) {
         Ok((children, _i)) => {
             result = children;
             for node in result {
@@ -286,7 +285,7 @@ pub fn parse_html(html: &String) -> (Vec<RenderItem>, String) {
         Err(e) => println!("{}", e),
     }
     let cur_state = RenderState::new();
-    return build_array(root, Vec::new(), cur_state, string!(""));
+    build_array(root, Vec::new(), cur_state, String::new())
 }
 
 fn build_array(
@@ -303,10 +302,7 @@ fn build_array(
             }
             HTMLToken::HyperLink => {
                 cur_state.link = i.end_ind;
-                match i.attributes.get("href") {
-                    Some(link) => cur_state.url = link.clone(),
-                    None => {}
-                }
+                if let Some(link) = i.attributes.get("href") { cur_state.url = link.clone() }
             }
             HTMLToken::LineBreak => {
                 let mut break_item = RenderItem::new();
@@ -325,16 +321,16 @@ fn build_array(
             HTMLToken::Heading => {
                 cur_state.heading = i.end_ind;
             }
-            HTMLToken::Text => {
+            HTMLToken::Text
                 if !(node.tag == HTMLToken::Unknown || node.tag == HTMLToken::Script)
                     && !is_text_whitespace(&i.text)
-                {
+                => {
                     let mut item = RenderItem::new();
                     let text = String::from_utf8(i.text.clone());
                     if text.is_ok() {
                         item.text = text.unwrap_or_else(|e| {
                             println!("{}", e);
-                            string!("")
+                            String::new()
                         });
                     }
                     if i.end_ind < cur_state.bold {
@@ -359,17 +355,16 @@ fn build_array(
                     }
                     ret_vec.push(item);
                 }
-            }
             _ => {}
         }
         let ret = build_array(i, ret_vec, cur_state.clone(), cur_title.clone());
         ret_vec = ret.0;
         cur_title = ret.1;
     }
-    return (ret_vec, cur_title);
+    (ret_vec, cur_title)
 }
 
-fn eat_whitespace(input_u8: &Vec<u8>, mut buf_pos: usize, incl_space: Option<bool>) -> usize {
+fn eat_whitespace(input_u8: &[u8], mut buf_pos: usize, incl_space: Option<bool>) -> usize {
     match incl_space {
         Some(true) => {
             while (buf_pos < input_u8.len()) && is_whitespace(input_u8[buf_pos]) {
@@ -385,74 +380,66 @@ fn eat_whitespace(input_u8: &Vec<u8>, mut buf_pos: usize, incl_space: Option<boo
     buf_pos
 }
 
-fn is_text_whitespace(text: &Vec<u8>) -> bool {
-    (text.len() > 0) && (text.len() < 2) && is_whitespace(text[0])
+fn is_text_whitespace(text: &[u8]) -> bool {
+    text.len() == 1 && is_whitespace(text[0])
 }
 
 fn is_whitespace(c: u8) -> bool {
-    match c as char {
-        '\n' | ' ' | '\t' | '\r' => true,
-        _ => false,
-    }
+    matches!(c as char, '\n' | ' ' | '\t' | '\r')
 }
 
 fn is_newline_or_tab(c: u8) -> bool {
-    match c as char {
-        '\n' | '\r' | '\t' => true,
-        _ => false,
-    }
+    matches!(c as char, '\n' | '\r' | '\t')
 }
 
-fn is_closing_tag(input_u8: &Vec<u8>, buf_pos: usize, tag: &Vec<u8>) -> bool {
+fn is_closing_tag(input_u8: &[u8], buf_pos: usize, tag: &[u8]) -> bool {
     if buf_pos + 2 < input_u8.len() {
-        return input_u8[buf_pos] == '<' as u8
-            && input_u8[buf_pos + 1] == '/' as u8
-            && (input_u8[buf_pos + 2..buf_pos + 2 + tag.len()].to_ascii_uppercase()
-                == tag.to_ascii_uppercase());
+        input_u8[buf_pos] == b'<'
+            && input_u8[buf_pos + 1] == b'/'
+            && input_u8[buf_pos + 2..buf_pos + 2 + tag.len()].eq_ignore_ascii_case(tag)
     } else {
-        return true;
+        true
     }
 }
 
-fn is_opening_tag(input_u8: &Vec<u8>, buf_pos: usize, tag: &Vec<u8>) -> bool {
+fn is_opening_tag(input_u8: &[u8], buf_pos: usize, tag: &[u8]) -> bool {
     if buf_pos + 1 < input_u8.len() {
-        return input_u8[buf_pos] == '<' as u8
-            && (input_u8[buf_pos + 1..buf_pos + 1 + tag.len()].to_ascii_uppercase()
-                == tag.to_ascii_uppercase());
+        input_u8[buf_pos] == b'<'
+            && input_u8[buf_pos + 1..buf_pos + 1 + tag.len()].eq_ignore_ascii_case(tag)
     } else {
-        return true;
+        true
     }
 }
 
-fn is_closing_comment(input_u8: &Vec<u8>, buf_pos: usize) -> bool {
+fn is_closing_comment(input_u8: &[u8], buf_pos: usize) -> bool {
     if buf_pos + 2 < input_u8.len() {
-        return input_u8[buf_pos] == '-' as u8
-            && input_u8[buf_pos + 1] == '-' as u8
-            && input_u8[buf_pos + 2] == '>' as u8;
+        input_u8[buf_pos] == b'-'
+            && input_u8[buf_pos + 1] == b'-'
+            && input_u8[buf_pos + 2] == b'>'
     } else {
-        return true;
+        true
     }
 }
 
-fn is_quote(input_u8: &Vec<u8>, buf_pos: usize) -> bool {
-    input_u8[buf_pos] == '\"' as u8 || input_u8[buf_pos] == '\'' as u8
+fn is_quote(input_u8: &[u8], buf_pos: usize) -> bool {
+    input_u8[buf_pos] == b'\"' || input_u8[buf_pos] == b'\''
 }
 
-fn not_close_of_open(input_u8: &Vec<u8>, buf_pos: usize) -> bool {
+fn not_close_of_open(input_u8: &[u8], buf_pos: usize) -> bool {
     buf_pos < input_u8.len()
-        && (input_u8[buf_pos] != '>' as u8
-            && !(input_u8[buf_pos] == '/' as u8 && input_u8[buf_pos + 1] == '>' as u8))
+        && (input_u8[buf_pos] != b'>'
+            && !(input_u8[buf_pos] == b'/' && input_u8[buf_pos + 1] == b'>'))
 }
 
 fn list_item_no_close(
-    input_u8: &Vec<u8>,
+    input_u8: &[u8],
     mut buf_pos: usize,
-    tag: &Vec<u8>,
+    tag: &[u8],
     html_tag: &HTMLToken,
 ) -> bool {
     buf_pos = eat_whitespace(input_u8, buf_pos, Some(true));
     *html_tag == HTMLToken::ListItem
-        && (is_opening_tag(input_u8, buf_pos, &tag)
-            || is_closing_tag(input_u8, buf_pos, &vec!['u' as u8, 'l' as u8])
-            || is_closing_tag(input_u8, buf_pos, &vec!['o' as u8, 'l' as u8])) 
+        && (is_opening_tag(input_u8, buf_pos, tag)
+            || is_closing_tag(input_u8, buf_pos, b"ul")
+            || is_closing_tag(input_u8, buf_pos, b"ol"))
 }

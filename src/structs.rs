@@ -1,10 +1,8 @@
-use imgui::ImString;
 use std::collections::HashMap;
 
 pub struct State {
-    pub show_app_main_menu_bar: bool,
     pub file_menu: FileMenuState,
-    pub url_to_get: ImString,
+    pub url_to_get: String,
     pub root_url: String,
     pub main_body_array: Vec<RenderItem>,
     pub sub_windows: SubWindowVisibility,
@@ -13,18 +11,23 @@ pub struct State {
     pub preloaded_pages: HashMap<String, String>,
 }
 
-impl<'a> Default for State {
+impl Default for State {
     fn default() -> Self {
         State {
-            show_app_main_menu_bar: true,
             file_menu: Default::default(),
-            url_to_get: ImString::new("https://adriann.github.io/rust_parser.html"),
-            root_url: string!(""),
+            url_to_get: String::from("https://adriann.github.io/rust_parser.html"),
+            root_url: String::new(),
             main_body_array: vec![RenderItem::new()],
             sub_windows: Default::default(),
             window_title: String::from("Microll"),
-            history: hashmap![string!("Microll: The Text-Based Web Browser") => WebpageFinder::create(WebpageType::Preload, string!("microll"))],
-            preloaded_pages: hashmap![string!("microll") => string!("microll.html")],
+            history: HashMap::from([(
+                String::from("Microll: The Text-Based Web Browser"),
+                WebpageFinder::create(WebpageType::Preload, String::from("microll")),
+            )]),
+            preloaded_pages: HashMap::from([(
+                String::from("microll"),
+                String::from(include_str!("microll.html")),
+            )]),
         }
     }
 }
@@ -40,20 +43,16 @@ impl Default for FileMenuState {
         FileMenuState {
             test_enabled: true,
             can_search: true,
-            file_to_get: String::from("E:\\Programming\\microll\\src\\test.html"),
+            file_to_get: String::from("src/test.html"),
         }
     }
 }
 
+#[derive(Default)]
 pub struct SubWindowVisibility {
     pub go_to_link: bool,
 }
 
-impl Default for SubWindowVisibility {
-    fn default() -> Self {
-        SubWindowVisibility { go_to_link: false }
-    }
-}
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum WebpageType {
@@ -80,7 +79,7 @@ impl WebpageFinder {
 
 #[derive(PartialEq, Debug)]
 pub enum HTMLToken {
-    ROOT,
+    Root,
     DocType,       // !Doctype
     HyperLink,     //a
     BoldText,      //b or strong
@@ -100,7 +99,7 @@ pub enum HTMLToken {
     PageTitle,     //title
     UnorderedList, //ul
     Comment,       //<!--***-->
-    VOID,          // no closing tag
+    Void,          // no closing tag
     Text,          // Text-only
     Unknown,
 }

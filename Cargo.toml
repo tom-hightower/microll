@@ -1,17 +1,12 @@
 [package]
 name = "microll"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Tom Hightower <tom.hightower356@gmail.com>"]
-edition = "2018"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-glium = { version = "0.25", default-features = true } # same as in imgui master branch
-imgui = "0.2.1"
-imgui-glium-renderer = "0.2.0"
-imgui-winit-support = "0.2.1"
-clipboard = "0.5"
-
+eframe = "0.35"
+rfd = "0.17"
 reqwest = { version = "0.12", features = ["blocking"] }
-nfd = "0.0.4"
