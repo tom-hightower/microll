@@ -9,6 +9,10 @@ pub struct State {
     pub window_title: String,
     pub history: HashMap<String, WebpageFinder>,
     pub preloaded_pages: HashMap<String, String>,
+    pub current_page: Option<WebpageFinder>,
+    pub back_stack: Vec<WebpageFinder>,
+    pub current_raw_html: String,
+    pub search: SearchState,
 }
 
 impl Default for State {
@@ -28,12 +32,15 @@ impl Default for State {
                 String::from("microll"),
                 String::from(include_str!("microll.html")),
             )]),
+            current_page: None,
+            back_stack: Vec::new(),
+            current_raw_html: String::new(),
+            search: SearchState::default(),
         }
     }
 }
 
 pub struct FileMenuState {
-    pub test_enabled: bool,
     pub can_search: bool,
     pub file_to_get: String,
 }
@@ -41,7 +48,6 @@ pub struct FileMenuState {
 impl Default for FileMenuState {
     fn default() -> Self {
         FileMenuState {
-            test_enabled: true,
             can_search: true,
             file_to_get: String::from("src/test.html"),
         }
@@ -51,6 +57,17 @@ impl Default for FileMenuState {
 #[derive(Default)]
 pub struct SubWindowVisibility {
     pub go_to_link: bool,
+    pub search: bool,
+    pub document_info: bool,
+    pub help: bool,
+    pub show_raw_html: bool,
+}
+
+#[derive(Default)]
+pub struct SearchState {
+    pub query: String,
+    pub matches: Vec<usize>,
+    pub current: usize,
 }
 
 

@@ -71,6 +71,15 @@ impl eframe::App for MicrollApp {
         if state.sub_windows.go_to_link {
             show_go_url_window(ui.ctx(), state);
         }
+        if state.sub_windows.search {
+            show_search_window(ui.ctx(), state);
+        }
+        if state.sub_windows.document_info {
+            show_document_info_window(ui.ctx(), state);
+        }
+        if state.sub_windows.help {
+            show_help_window(ui.ctx(), state);
+        }
     }
 }
 
@@ -95,34 +104,62 @@ fn show_main_content(ui: &mut egui::Ui, state: &mut State) {
             )
             .clicked()
         {
-            state.main_body_array = html::parse_html(&state.preloaded_pages["microll"]).0;
+            navigation::go_to_preload(state, "microll");
         }
     });
-    build_webpage(ui, state);
+    if state.sub_windows.show_raw_html {
+        ui.monospace(state.current_raw_html.as_str());
+    } else {
+        build_webpage(ui, state);
+    }
 }
 
 enum Inline {
-    Text(String),
-    Code(String),
-    Link { text: String, url: String },
+    Text(usize, String),
+    Code(usize, String),
+    Link { index: usize, text: String, url: String },
 }
 
-fn flush_inline(ui: &mut egui::Ui, run: &mut Vec<Inline>, clicked_url: &mut Option<String>) {
+fn highlighted_text(text: String, index: usize, highlight: Option<usize>) -> egui::RichText {
+    let rich = egui::RichText::new(text);
+    if Some(index) == highlight {
+        rich.background_color(egui::Color32::YELLOW)
+    } else {
+        rich
+    }
+}
+
+fn flush_inline(
+    ui: &mut egui::Ui,
+    run: &mut Vec<Inline>,
+    clicked_url: &mut Option<String>,
+    highlight: Option<usize>,
+) {
     if run.is_empty() {
         return;
     }
     ui.horizontal_wrapped(|ui| {
         for item in run.drain(..) {
             match item {
-                Inline::Text(text) => {
-                    ui.label(text);
+                Inline::Text(index, text) => {
+                    let response = ui.label(highlighted_text(text, index, highlight));
+                    if Some(index) == highlight {
+                        response.scroll_to_me(Some(egui::Align::Center));
+                    }
                 }
-                Inline::Code(text) => {
-                    ui.code(text);
+                Inline::Code(index, text) => {
+                    let response = ui.code(highlighted_text(text, index, highlight));
+                    if Some(index) == highlight {
+                        response.scroll_to_me(Some(egui::Align::Center));
+                    }
                 }
-                Inline::Link { text, url } => {
-                    if ui.link(text).clicked() {
+                Inline::Link { index, text, url } => {
+                    let response = ui.link(highlighted_text(text, index, highlight));
+                    if response.clicked() {
                         *clicked_url = Some(url);
+                    }
+                    if Some(index) == highlight {
+                        response.scroll_to_me(Some(egui::Align::Center));
                     }
                 }
             }
@@ -131,6 +168,11 @@ fn flush_inline(ui: &mut egui::Ui, run: &mut Vec<Inline>, clicked_url: &mut Opti
 }
 
 fn build_webpage(ui: &mut egui::Ui, state: &mut State) {
+    let highlight = if state.sub_windows.search && !state.search.matches.is_empty() {
+        Some(state.search.matches[state.search.current])
+    } else {
+        None
+    };
     let mut run: Vec<Inline> = Vec::new();
     let mut clicked_url: Option<String> = None;
     let mut new_title: Option<String> = None;
@@ -141,34 +183,46 @@ fn build_webpage(ui: &mut egui::Ui, state: &mut State) {
         if item.title {
             new_title = Some(item.text.clone());
         } else if item.line_break {
-            flush_inline(ui, &mut run, &mut clicked_url);
+            flush_inline(ui, &mut run, &mut clicked_url, highlight);
             ui.add_space(ui.text_style_height(&egui::TextStyle::Body));
         } else if item.code {
             let prev_code = i > 0 && state.main_body_array[i - 1].code;
             let next_code = i + 1 < len && state.main_body_array[i + 1].code;
             if !prev_code && !next_code {
-                run.push(Inline::Code(item.text.clone()));
+                run.push(Inline::Code(i, item.text.clone()));
             } else {
                 // Consecutive code items form one block: concatenate them.
+                let start_i = i;
                 let mut code_text = item.text.clone();
                 while i + 1 < len && state.main_body_array[i + 1].code {
                     i += 1;
                     code_text.push_str(&state.main_body_array[i].text);
                 }
-                flush_inline(ui, &mut run, &mut clicked_url);
-                ui.monospace(code_text);
+                flush_inline(ui, &mut run, &mut clicked_url, highlight);
+                let block_highlighted = highlight.is_some_and(|h| (start_i..=i).contains(&h));
+                let rich = egui::RichText::new(code_text);
+                let rich = if block_highlighted {
+                    rich.background_color(egui::Color32::YELLOW)
+                } else {
+                    rich
+                };
+                let response = ui.monospace(rich);
+                if block_highlighted {
+                    response.scroll_to_me(Some(egui::Align::Center));
+                }
             }
         } else if item.link {
             run.push(Inline::Link {
+                index: i,
                 text: item.text.clone(),
                 url: item.url.clone(),
             });
         } else {
-            run.push(Inline::Text(item.text.clone()));
+            run.push(Inline::Text(i, item.text.clone()));
         }
         i += 1;
     }
-    flush_inline(ui, &mut run, &mut clicked_url);
+    flush_inline(ui, &mut run, &mut clicked_url, highlight);
 
     if let Some(title) = new_title {
         state.window_title = title;
@@ -198,5 +252,91 @@ fn show_go_url_window(ctx: &egui::Context, state: &mut State) {
         });
     if !open {
         state.sub_windows.go_to_link = false;
+    }
+}
+
+fn show_search_window(ctx: &egui::Context, state: &mut State) {
+    let mut open = true;
+    egui::Window::new("Search")
+        .open(&mut open)
+        .resizable(false)
+        .show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                let response = ui
+                    .add(egui::TextEdit::singleline(&mut state.search.query).desired_width(300.0));
+                if response.changed() {
+                    navigation::search_page(state);
+                }
+                if ui.button("Previous").clicked() {
+                    navigation::step_search(state, false);
+                }
+                if ui.button("Next").clicked() {
+                    navigation::step_search(state, true);
+                }
+            });
+            if state.search.matches.is_empty() {
+                ui.label("No matches");
+            } else {
+                ui.label(format!(
+                    "Match {} of {}",
+                    state.search.current + 1,
+                    state.search.matches.len()
+                ));
+            }
+        });
+    if !open {
+        state.sub_windows.search = false;
+    }
+}
+
+fn show_document_info_window(ctx: &egui::Context, state: &mut State) {
+    let mut open = true;
+    egui::Window::new("Document Info")
+        .open(&mut open)
+        .resizable(false)
+        .show(ctx, |ui| {
+            ui.label(format!("Title: {}", state.window_title));
+            let location = state
+                .current_page
+                .as_ref()
+                .map(|finder| finder.location.clone())
+                .unwrap_or_else(|| String::from("(none)"));
+            ui.label(format!("Location: {location}"));
+            let link_count = state.main_body_array.iter().filter(|i| i.link).count();
+            ui.label(format!("Links: {link_count}"));
+            let word_count: usize = state
+                .main_body_array
+                .iter()
+                .map(|i| i.text.split_whitespace().count())
+                .sum();
+            ui.label(format!("Words: {word_count}"));
+            ui.label(format!("HTML size: {} bytes", state.current_raw_html.len()));
+        });
+    if !open {
+        state.sub_windows.document_info = false;
+    }
+}
+
+fn show_help_window(ctx: &egui::Context, state: &mut State) {
+    let mut open = true;
+    egui::Window::new("Help")
+        .open(&mut open)
+        .resizable(false)
+        .show(ctx, |ui| {
+            ui.label(format!("Microll v{}", env!("CARGO_PKG_VERSION")));
+            ui.label("A text-based web browser.");
+            ui.separator();
+            ui.label("Keyboard shortcuts:");
+            ui.label("Ctrl+G    Go to URL");
+            ui.label("Alt+Left  Go Back");
+            ui.label("Ctrl+O    Open file");
+            ui.label("Alt+F4    Quit");
+            ui.label("/         Search");
+            ui.label("?         Search backward");
+            ui.label("\\         Toggle HTML");
+            ui.label("=         Document Info");
+        });
+    if !open {
+        state.sub_windows.help = false;
     }
 }

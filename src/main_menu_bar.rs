@@ -1,15 +1,13 @@
 use eframe::egui;
 
-use crate::html;
 use crate::navigation;
-use crate::structs::{FileMenuState, State, WebpageType};
+use crate::structs::{State, WebpageType};
 
 pub fn show_app_main_menu_bar(ui: &mut egui::Ui, state: &mut State) {
     egui::MenuBar::new().ui(ui, |ui| {
         ui.menu_button("File", |ui| show_main_menu_file(ui, state));
-        ui.menu_button("View", |ui| show_main_menu_view(ui, &mut state.file_menu));
-        ui.menu_button("Link", show_main_menu_link);
-        ui.menu_button("Help", show_main_menu_help);
+        ui.menu_button("View", |ui| show_main_menu_view(ui, state));
+        ui.menu_button("Help", |ui| show_main_menu_help(ui, state));
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             ui.label(&state.window_title);
         });
@@ -23,7 +21,15 @@ fn show_main_menu_file(ui: &mut egui::Ui, state: &mut State) {
     {
         state.sub_windows.go_to_link = !state.sub_windows.go_to_link;
     }
-    let _ = ui.add(egui::Button::new("Go Back").shortcut_text("Alt+Left"));
+    if ui
+        .add_enabled(
+            !state.back_stack.is_empty(),
+            egui::Button::new("Go Back").shortcut_text("Alt+Left"),
+        )
+        .clicked()
+    {
+        navigation::go_back(state);
+    }
     ui.menu_button("Recent", |ui| {
         for (name, finder) in &state.history.clone() {
             if ui.button(name).clicked() {
@@ -37,14 +43,17 @@ fn show_main_menu_file(ui: &mut egui::Ui, state: &mut State) {
                         navigation::go_to_page(state);
                     }
                     WebpageType::Preload => {
-                        state.main_body_array =
-                            html::parse_html(&state.preloaded_pages[&finder.location]).0;
+                        navigation::go_to_preload(state, &finder.location);
                     }
                 }
             }
         }
     });
-    let _ = ui.add(egui::Button::new("New Window").shortcut_text("Ctrl+N"));
+    ui.add_enabled(
+        false,
+        egui::Button::new("New Window").shortcut_text("Ctrl+N"),
+    )
+    .on_disabled_hover_text("Not yet implemented");
     ui.separator();
     if ui
         .add(egui::Button::new("Open file").shortcut_text("Ctrl+O"))
@@ -53,9 +62,10 @@ fn show_main_menu_file(ui: &mut egui::Ui, state: &mut State) {
     {
         navigation::go_to_file(state);
     }
-    let _ = ui.button("Save As");
+    if ui.button("Save As").clicked() {
+        navigation::save_as(state);
+    }
     ui.separator();
-    ui.checkbox(&mut state.file_menu.test_enabled, "Checked Test");
     if ui
         .add(egui::Button::new("Quit").shortcut_text("Alt+F4"))
         .clicked()
@@ -64,31 +74,46 @@ fn show_main_menu_file(ui: &mut egui::Ui, state: &mut State) {
     }
 }
 
-fn show_main_menu_view(ui: &mut egui::Ui, file_menu_state: &mut FileMenuState) {
-    let _ = ui.add_enabled(
-        file_menu_state.can_search,
-        egui::Button::new("Search").shortcut_text("/"),
-    );
-    let _ = ui.add_enabled(
-        file_menu_state.can_search,
-        egui::Button::new("Search backward").shortcut_text("?"),
-    );
+fn show_main_menu_view(ui: &mut egui::Ui, state: &mut State) {
+    if ui
+        .add_enabled(
+            state.file_menu.can_search,
+            egui::Button::new("Search").shortcut_text("/"),
+        )
+        .clicked()
+    {
+        state.sub_windows.search = true;
+    }
+    if ui
+        .add_enabled(
+            state.file_menu.can_search,
+            egui::Button::new("Search backward").shortcut_text("?"),
+        )
+        .clicked()
+    {
+        state.sub_windows.search = true;
+        navigation::step_search(state, false);
+    }
     ui.separator();
-    let _ = ui.add(egui::Button::new("Toggle HTML").shortcut_text("\\"));
-    let _ = ui.add(egui::Button::new("Document Info").shortcut_text("="));
-    ui.separator();
-    let _ = ui.button("HTML Options");
+    if ui
+        .add(egui::Button::new("Toggle HTML").shortcut_text("\\"))
+        .clicked()
+    {
+        state.sub_windows.show_raw_html = !state.sub_windows.show_raw_html;
+    }
+    if ui
+        .add(egui::Button::new("Document Info").shortcut_text("="))
+        .clicked()
+    {
+        state.sub_windows.document_info = true;
+    }
 }
 
-fn show_main_menu_link(ui: &mut egui::Ui) {
-    let _ = ui.add(egui::Button::new("Follow Link").shortcut_text("Right"));
-    ui.separator();
-    let _ = ui.add(egui::Button::new("Open in New Tab").shortcut_text("Ctrl+T"));
-    let _ = ui.button("Open in New Background Tab");
-    ui.separator();
-    let _ = ui.button("Download Link");
-}
-
-fn show_main_menu_help(ui: &mut egui::Ui) {
-    let _ = ui.add(egui::Button::new("Help").shortcut_text("F1"));
+fn show_main_menu_help(ui: &mut egui::Ui, state: &mut State) {
+    if ui
+        .add(egui::Button::new("Help").shortcut_text("F1"))
+        .clicked()
+    {
+        state.sub_windows.help = true;
+    }
 }
