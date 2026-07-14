@@ -13,5 +13,5 @@ imgui-glium-renderer = "0.2.0"
 imgui-winit-support = "0.2.1"
 clipboard = "0.5"
 
-reqwest = "0.9"
+reqwest = { version = "0.12", features = ["blocking"] }
 nfd = "0.0.4"

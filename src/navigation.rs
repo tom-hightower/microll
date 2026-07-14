@@ -35,7 +35,7 @@ pub fn go_to_file(state: &mut State) {
 
 pub fn file_picker(state: &mut State) -> bool {
     let result = nfd::open_file_dialog(Some("html"), None).unwrap_or_else(|e| {
-        panic!(e);
+        std::panic::panic_any(e);
     });
     return match result {
         Response::Okay(file_path) => {

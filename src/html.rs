@@ -451,8 +451,8 @@ fn list_item_no_close(
     html_tag: &HTMLToken,
 ) -> bool {
     buf_pos = eat_whitespace(input_u8, buf_pos, Some(true));
-    (*html_tag == HTMLToken::ListItem
+    *html_tag == HTMLToken::ListItem
         && (is_opening_tag(input_u8, buf_pos, &tag)
             || is_closing_tag(input_u8, buf_pos, &vec!['u' as u8, 'l' as u8])
-            || is_closing_tag(input_u8, buf_pos, &vec!['o' as u8, 'l' as u8])))
+            || is_closing_tag(input_u8, buf_pos, &vec!['o' as u8, 'l' as u8])) 
 }

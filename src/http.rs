@@ -2,8 +2,8 @@ extern crate reqwest;
 use crate::structs::State;
 
 pub fn get_text(url: &String, state: &mut State) -> Result<(String, String), reqwest::Error> {
-    let body = match reqwest::get(url) {
-        Ok(mut resp) => {
+    let body = match reqwest::blocking::get(url) {
+        Ok(resp) => {
             let last_dot: usize = match url.rfind('.') {
                 Some(idx) => idx,
                 _ => 0,
@@ -16,7 +16,7 @@ pub fn get_text(url: &String, state: &mut State) -> Result<(String, String), req
             resp.text()?
         }
         Err(e) => {
-            if e.to_string() == string!("relative URL without a base") {
+            if e.is_builder() && format!("{:?}", e).contains("RelativeUrlWithoutBase") {
                 let mut new_url: String = state.root_url.clone();
                 new_url.push('/');
                 if url.starts_with('/') {
@@ -27,7 +27,7 @@ pub fn get_text(url: &String, state: &mut State) -> Result<(String, String), req
                 return get_text(&new_url, state);
             } else {
                 println!("Error: {}", e);
-                panic!(e)
+                std::panic::panic_any(e)
             }
         }
     };
