@@ -1,6 +1,7 @@
 mod html;
 mod http;
 mod main_menu_bar;
+mod menu_actions;
 mod navigation;
 mod structs;
 
@@ -58,6 +59,7 @@ impl MicrollApp {
 impl eframe::App for MicrollApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let state = &mut self.state;
+        handle_menu_shortcuts(ui.ctx(), state);
         egui::Panel::top("menu_bar").show(ui, |ui| {
             main_menu_bar::show_app_main_menu_bar(ui, state);
         });
@@ -79,6 +81,26 @@ impl eframe::App for MicrollApp {
         }
         if state.sub_windows.help {
             show_help_window(ui.ctx(), state);
+        }
+    }
+}
+
+fn handle_menu_shortcuts(ctx: &egui::Context, state: &mut State) {
+    let editing_text = ctx.text_edit_focused();
+
+    for &action in menu_actions::ALL {
+        let Some(shortcut) = action.shortcut() else {
+            continue;
+        };
+        // Don't listen for shortcuts if we're focused on a text field etc.
+        if editing_text && shortcut.modifiers.is_none() {
+            continue;
+        }
+        if !action.enabled(state) {
+            continue;
+        }
+        if ctx.input_mut(|i| i.consume_shortcut(&shortcut)) {
+            action.apply(state, ctx);
         }
     }
 }
@@ -327,14 +349,15 @@ fn show_help_window(ctx: &egui::Context, state: &mut State) {
             ui.label("A text-based web browser.");
             ui.separator();
             ui.label("Keyboard shortcuts:");
-            ui.label("Ctrl+G    Go to URL");
-            ui.label("Alt+Left  Go Back");
-            ui.label("Ctrl+O    Open file");
-            ui.label("Alt+F4    Quit");
-            ui.label("/         Search");
-            ui.label("?         Search backward");
-            ui.label("\\         Toggle HTML");
-            ui.label("=         Document Info");
+            for &action in menu_actions::ALL {
+                if let Some(shortcut) = action.shortcut() {
+                    ui.label(format!(
+                        "{:<10}{}",
+                        menu_actions::format_shortcut(&shortcut),
+                        action.label()
+                    ));
+                }
+            }
         });
     if !open {
         state.sub_windows.help = false;

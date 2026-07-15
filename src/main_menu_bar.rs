@@ -1,5 +1,6 @@
 use eframe::egui;
 
+use crate::menu_actions::{self, MenuAction};
 use crate::navigation;
 use crate::structs::{State, WebpageType};
 
@@ -14,22 +15,19 @@ pub fn show_app_main_menu_bar(ui: &mut egui::Ui, state: &mut State) {
     });
 }
 
+fn action_button(ui: &mut egui::Ui, state: &mut State, action: MenuAction) {
+    let mut button = egui::Button::new(action.label());
+    if let Some(shortcut) = action.shortcut() {
+        button = button.shortcut_text(menu_actions::format_shortcut(&shortcut));
+    }
+    if ui.add_enabled(action.enabled(state), button).clicked() {
+        action.apply(state, ui.ctx());
+    }
+}
+
 fn show_main_menu_file(ui: &mut egui::Ui, state: &mut State) {
-    if ui
-        .add(egui::Button::new("Go to URL").shortcut_text("Ctrl+G"))
-        .clicked()
-    {
-        state.sub_windows.go_to_link = !state.sub_windows.go_to_link;
-    }
-    if ui
-        .add_enabled(
-            !state.back_stack.is_empty(),
-            egui::Button::new("Go Back").shortcut_text("Alt+Left"),
-        )
-        .clicked()
-    {
-        navigation::go_back(state);
-    }
+    action_button(ui, state, MenuAction::GoToUrl);
+    action_button(ui, state, MenuAction::GoBack);
     ui.menu_button("Recent", |ui| {
         for (name, finder) in &state.history.clone() {
             if ui.button(name).clicked() {
@@ -55,65 +53,22 @@ fn show_main_menu_file(ui: &mut egui::Ui, state: &mut State) {
     )
     .on_disabled_hover_text("Not yet implemented");
     ui.separator();
-    if ui
-        .add(egui::Button::new("Open file").shortcut_text("Ctrl+O"))
-        .clicked()
-        && navigation::file_picker(state)
-    {
-        navigation::go_to_file(state);
-    }
+    action_button(ui, state, MenuAction::OpenFile);
     if ui.button("Save As").clicked() {
         navigation::save_as(state);
     }
     ui.separator();
-    if ui
-        .add(egui::Button::new("Quit").shortcut_text("Alt+F4"))
-        .clicked()
-    {
-        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
-    }
+    action_button(ui, state, MenuAction::Quit);
 }
 
 fn show_main_menu_view(ui: &mut egui::Ui, state: &mut State) {
-    if ui
-        .add_enabled(
-            state.file_menu.can_search,
-            egui::Button::new("Search").shortcut_text("/"),
-        )
-        .clicked()
-    {
-        state.sub_windows.search = true;
-    }
-    if ui
-        .add_enabled(
-            state.file_menu.can_search,
-            egui::Button::new("Search backward").shortcut_text("?"),
-        )
-        .clicked()
-    {
-        state.sub_windows.search = true;
-        navigation::step_search(state, false);
-    }
+    action_button(ui, state, MenuAction::Search);
+    action_button(ui, state, MenuAction::SearchBackward);
     ui.separator();
-    if ui
-        .add(egui::Button::new("Toggle HTML").shortcut_text("\\"))
-        .clicked()
-    {
-        state.sub_windows.show_raw_html = !state.sub_windows.show_raw_html;
-    }
-    if ui
-        .add(egui::Button::new("Document Info").shortcut_text("="))
-        .clicked()
-    {
-        state.sub_windows.document_info = true;
-    }
+    action_button(ui, state, MenuAction::ToggleHtml);
+    action_button(ui, state, MenuAction::DocumentInfo);
 }
 
 fn show_main_menu_help(ui: &mut egui::Ui, state: &mut State) {
-    if ui
-        .add(egui::Button::new("Help").shortcut_text("F1"))
-        .clicked()
-    {
-        state.sub_windows.help = true;
-    }
+    action_button(ui, state, MenuAction::Help);
 }
