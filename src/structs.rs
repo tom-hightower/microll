@@ -103,6 +103,7 @@ pub enum HTMLToken {
     Body,          //body
     LineBreak,     //br, wbr, or hr
     Code,          //code
+    Preformatted,  //pre
     DivSection,    //div
     Head,          //head
     Heading,       //heading
@@ -112,6 +113,7 @@ pub enum HTMLToken {
     OrderedList,   //ol
     Paragraph,     //p
     Script,        //script
+    Style,         //style
     Span,          //span
     PageTitle,     //title
     UnorderedList, //ul
@@ -119,6 +121,81 @@ pub enum HTMLToken {
     Void,          // no closing tag
     Text,          // Text-only
     Unknown,
+
+    // Tables
+    Table,             //table
+    TableHead,         //thead
+    TableBody,         //tbody
+    TableFoot,         //tfoot
+    TableRow,          //tr
+    TableCell,         //td
+    TableHeaderCell,   //th
+    TableCaption,      //caption
+    TableColumnGroup,  //colgroup
+
+    // Forms
+    Form,          //form
+    Button,        //button
+    Select,        //select
+    Option,        //option
+    OptionGroup,   //optgroup
+    TextArea,      //textarea
+    Label,         //label
+    FieldSet,      //fieldset
+    Legend,        //legend
+
+    BlockQuote,    //blockquote
+
+    // HTML5 semantic sectioning
+    Nav,           //nav
+    PageHeader,    //header
+    PageFooter,    //footer
+    Main,          //main
+    Section,       //section
+    Article,       //article
+    Aside,         //aside
+    Figure,        //figure
+    FigureCaption, //figcaption
+
+    // Raw text
+    IFrame,        //iframe
+    NoScript,      //noscript
+    RawText,       //xmp, noembed, or noframes
+    Template,      //template
+
+    // Inline text-level semantics
+    SmallText,     //small
+    Mark,          //mark
+    Subscript,     //sub
+    Superscript,   //sup
+    Deleted,       //del
+    Inserted,      //ins
+    Underline,     //u
+    Strikethrough, //s
+    Abbreviation,  //abbr
+    Citation,      //cite
+    KeyboardInput, //kbd
+    SampleOutput,  //samp
+
+    // Definition lists
+    DescriptionList,    //dl
+    DescriptionTerm,    //dt
+    DescriptionDetails, //dd
+
+    Details, //details
+    Summary, //summary
+    Dialog,  //dialog
+
+    // other?
+    Canvas,          //canvas
+    Svg,             //svg
+    Time,            //time
+    Data,            //data
+    Variable,        //var
+    Ruby,            //ruby
+    RubyText,        //rt
+    RubyParenthesis, //rp
+    Address,         //address
 }
 
 pub struct ParseNode {

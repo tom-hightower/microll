@@ -9,7 +9,7 @@ use std::str;
 const MAX_DEPTH: usize = 64;
 
 /// Recursive descent lexer/parser ("larser").
-fn larse(input_u8: &[u8], begin: usize, depth: usize) -> (Vec<ParseNode>, usize) {
+fn larse(input_u8: &[u8], begin: usize, depth: usize, parent: &HTMLToken) -> (Vec<ParseNode>, usize) {
     let mut result = Vec::new();
     let mut i: usize = begin;
     while i < input_u8.len() {
@@ -18,7 +18,11 @@ fn larse(input_u8: &[u8], begin: usize, depth: usize) -> (Vec<ParseNode>, usize)
             continue;
         }
         if input_u8[i] != b'<' {
-            // belongs to caller 
+            // belongs to caller
+            break;
+        }
+        if has_implied_close(input_u8, i, parent) {
+            // this tag implicitly closes the caller's element
             break;
         }
         let lt_pos = i;
@@ -124,10 +128,10 @@ fn larse_element(
         let mut start_text: usize = buf_pos;
         while buf_pos < len
             && !is_closing_tag(input_u8, buf_pos, &tag)
-            && !list_item_no_close(input_u8, buf_pos, &tag, &html_tag)
+            && !has_implied_close(input_u8, buf_pos, &html_tag)
         {
             if input_u8[buf_pos] != b'<'
-                || html_tag == HTMLToken::Script
+                || is_raw_text_element(&html_tag)
                 || depth >= MAX_DEPTH
             {
                 text.push(input_u8[buf_pos]);
@@ -145,7 +149,7 @@ fn larse_element(
                 );
                 children.push(node);
             }
-            let (new_childs, new_pos) = larse(input_u8, buf_pos, depth + 1);
+            let (new_childs, new_pos) = larse(input_u8, buf_pos, depth + 1, &html_tag);
             children.extend(new_childs);
             if new_pos > buf_pos {
                 buf_pos = new_pos;
@@ -177,8 +181,8 @@ fn larse_element(
             );
             children.push(node);
         }
-        if list_item_no_close(input_u8, buf_pos, &tag, &html_tag) {
-            // Implicitly closed <li>, leave the next tag for our parent
+        if has_implied_close(input_u8, buf_pos, &html_tag) {
+            // implicitly closed element, leave the next tag for our parent
             buf_pos = eat_whitespace(input_u8, buf_pos);
             let node = ParseNode::create(children, html_tag, attributes, Vec::new(), lt_pos, buf_pos);
             result.push(node);
@@ -282,6 +286,7 @@ fn match_tag(tag: &[u8]) -> HTMLToken {
         "BODY" => HTMLToken::Body,
         "BR" | "WBR" | "HR" => HTMLToken::LineBreak,
         "CODE" => HTMLToken::Code,
+        "PRE" => HTMLToken::Preformatted,
         "DIV" => HTMLToken::DivSection,
         "H1" | "H2" | "H3" | "H4" | "H5" | "H6" => HTMLToken::Heading,
         "I" | "EM" => HTMLToken::ItalicText,
@@ -289,12 +294,89 @@ fn match_tag(tag: &[u8]) -> HTMLToken {
         "OL" => HTMLToken::OrderedList,
         "P" => HTMLToken::Paragraph,
         "SCRIPT" => HTMLToken::Script,
+        "STYLE" => HTMLToken::Style,
         "SPAN" => HTMLToken::Span,
         "TITLE" => HTMLToken::PageTitle,
         "UL" => HTMLToken::UnorderedList,
         "!DOCTYPE" => HTMLToken::DocType,
+
+        // Tables
+        "TABLE" => HTMLToken::Table,
+        "THEAD" => HTMLToken::TableHead,
+        "TBODY" => HTMLToken::TableBody,
+        "TFOOT" => HTMLToken::TableFoot,
+        "TR" => HTMLToken::TableRow,
+        "TD" => HTMLToken::TableCell,
+        "TH" => HTMLToken::TableHeaderCell,
+        "CAPTION" => HTMLToken::TableCaption,
+        "COLGROUP" => HTMLToken::TableColumnGroup,
+
+        // Forms
+        "FORM" => HTMLToken::Form,
+        "BUTTON" => HTMLToken::Button,
+        "SELECT" => HTMLToken::Select,
+        "OPTION" => HTMLToken::Option,
+        "OPTGROUP" => HTMLToken::OptionGroup,
+        "TEXTAREA" => HTMLToken::TextArea,
+        "LABEL" => HTMLToken::Label,
+        "FIELDSET" => HTMLToken::FieldSet,
+        "LEGEND" => HTMLToken::Legend,
+
+        "BLOCKQUOTE" => HTMLToken::BlockQuote,
+
+        // HTML5 semantic sectioning
+        "NAV" => HTMLToken::Nav,
+        "HEADER" => HTMLToken::PageHeader,
+        "FOOTER" => HTMLToken::PageFooter,
+        "MAIN" => HTMLToken::Main,
+        "SECTION" => HTMLToken::Section,
+        "ARTICLE" => HTMLToken::Article,
+        "ASIDE" => HTMLToken::Aside,
+        "FIGURE" => HTMLToken::Figure,
+        "FIGCAPTION" => HTMLToken::FigureCaption,
+
+        // Raw text / special content model elements
+        "IFRAME" => HTMLToken::IFrame,
+        "NOSCRIPT" => HTMLToken::NoScript,
+        "XMP" | "NOEMBED" | "NOFRAMES" => HTMLToken::RawText,
+        "TEMPLATE" => HTMLToken::Template,
+
+        // Inline text-level semantics
+        "SMALL" => HTMLToken::SmallText,
+        "MARK" => HTMLToken::Mark,
+        "SUB" => HTMLToken::Subscript,
+        "SUP" => HTMLToken::Superscript,
+        "DEL" => HTMLToken::Deleted,
+        "INS" => HTMLToken::Inserted,
+        "U" => HTMLToken::Underline,
+        "S" => HTMLToken::Strikethrough,
+        "ABBR" => HTMLToken::Abbreviation,
+        "CITE" => HTMLToken::Citation,
+        "KBD" => HTMLToken::KeyboardInput,
+        "SAMP" => HTMLToken::SampleOutput,
+
+        // Definition lists
+        "DL" => HTMLToken::DescriptionList,
+        "DT" => HTMLToken::DescriptionTerm,
+        "DD" => HTMLToken::DescriptionDetails,
+
+        "DETAILS" => HTMLToken::Details,
+        "SUMMARY" => HTMLToken::Summary,
+        "DIALOG" => HTMLToken::Dialog,
+
+        // Other
+        "CANVAS" => HTMLToken::Canvas,
+        "SVG" => HTMLToken::Svg,
+        "TIME" => HTMLToken::Time,
+        "DATA" => HTMLToken::Data,
+        "VAR" => HTMLToken::Variable,
+        "RUBY" => HTMLToken::Ruby,
+        "RT" => HTMLToken::RubyText,
+        "RP" => HTMLToken::RubyParenthesis,
+        "ADDRESS" => HTMLToken::Address,
+
         "AREA" | "BASE" | "COL" | "COMMAND" | "EMBED" | "IMG" | "INPUT" | "KEYGEN" | "LINK"
-        | "META" | "PARAM" | "SOURCE" | "TRACK" | "PATH" => HTMLToken::Void,
+        | "META" | "PARAM" | "SOURCE" | "TRACK" => HTMLToken::Void,
         _ => HTMLToken::Unknown,
     }
 }
@@ -304,7 +386,7 @@ pub fn parse_html(html: &str) -> (Vec<RenderItem>, String) {
     root.tag = HTMLToken::Root;
     root.start_ind = 0;
     root.end_ind = html.len();
-    let (children, _) = larse(html.as_bytes(), 0, 0);
+    let (children, _) = larse(html.as_bytes(), 0, 0, &HTMLToken::Root);
     root.children = children;
     let cur_state = RenderState::new();
     build_array(root, Vec::new(), cur_state, String::new())
@@ -318,6 +400,9 @@ fn build_array(
 ) -> (Vec<RenderItem>, String) {
     let mut cur_title = title;
     for i in node.children {
+        if is_hidden_subtree(&i) {
+            continue;
+        }
         match i.tag {
             HTMLToken::BoldText => {
                 cur_state.bold = i.end_ind;
@@ -498,18 +583,92 @@ fn is_closing_comment(input_u8: &[u8], buf_pos: usize) -> bool {
     }
 }
 
-/// An <li> is implicitly closed by the next <li> or by </ul> / </ol>
-fn list_item_no_close(
-    input_u8: &[u8],
-    buf_pos: usize,
-    tag: &[u8],
-    html_tag: &HTMLToken,
-) -> bool {
+/// nested tags are not parsed for elements whose contents are raw text
+fn is_raw_text_element(tag: &HTMLToken) -> bool {
+    matches!(
+        tag,
+        HTMLToken::Script
+            | HTMLToken::Style
+            | HTMLToken::RawText
+            | HTMLToken::TextArea
+            | HTMLToken::IFrame
+            | HTMLToken::Svg
+    )
+}
+
+/// True if the tag at `buf_pos` implicitly closes an open `html_tag` element
+/// with an optional end tag (like a second <li>, or </ul> while in an <li>).
+fn has_implied_close(input_u8: &[u8], buf_pos: usize, html_tag: &HTMLToken) -> bool {
+    // Openers that end a <p>: block-level elements
+    const P_OPEN: &[&[u8]] = &[
+        b"address", b"article", b"aside", b"blockquote", b"details", b"dialog", b"div", b"dl",
+        b"fieldset", b"figcaption", b"figure", b"footer", b"form", b"h1", b"h2", b"h3", b"h4",
+        b"h5", b"h6", b"header", b"hr", b"main", b"nav", b"ol", b"p", b"pre", b"section",
+        b"table", b"ul",
+    ];
+    const LI_OPEN: &[&[u8]] = &[b"li"];
+    const LI_CLOSE: &[&[u8]] = &[b"ul", b"ol"];
+    const DT_OPEN: &[&[u8]] = &[b"dt", b"dd"];
+    const DT_CLOSE: &[&[u8]] = &[b"dl"];
+    const OPTION_OPEN: &[&[u8]] = &[b"option", b"optgroup"];
+    const OPTION_CLOSE: &[&[u8]] = &[b"select", b"optgroup", b"datalist"];
+    const OPTGROUP_OPEN: &[&[u8]] = &[b"optgroup"];
+    const OPTGROUP_CLOSE: &[&[u8]] = &[b"select"];
+    const TR_OPEN: &[&[u8]] = &[b"tr"];
+    const TR_CLOSE: &[&[u8]] = &[b"table", b"tbody", b"thead", b"tfoot"];
+    // A new row also ends the current cell
+    const TD_OPEN: &[&[u8]] = &[b"td", b"th", b"tr"];
+    const TD_CLOSE: &[&[u8]] = &[b"tr", b"table", b"tbody", b"thead", b"tfoot"];
+    const THEAD_OPEN: &[&[u8]] = &[b"tbody", b"tfoot"];
+    const TABLE_CLOSE: &[&[u8]] = &[b"table"];
+    const CAPTION_OPEN: &[&[u8]] = &[b"tr", b"thead", b"tbody", b"tfoot", b"colgroup"];
+    const RT_OPEN: &[&[u8]] = &[b"rt", b"rp"];
+    const RUBY_CLOSE: &[&[u8]] = &[b"ruby"];
+    const NONE: &[&[u8]] = &[];
+
+    let (openers, closers, any_closer): (&[&[u8]], &[&[u8]], bool) = match html_tag {
+        HTMLToken::ListItem => (LI_OPEN, LI_CLOSE, false),
+        HTMLToken::DescriptionTerm | HTMLToken::DescriptionDetails => (DT_OPEN, DT_CLOSE, false),
+        HTMLToken::Option => (OPTION_OPEN, OPTION_CLOSE, false),
+        HTMLToken::OptionGroup => (OPTGROUP_OPEN, OPTGROUP_CLOSE, false),
+        HTMLToken::Paragraph => (P_OPEN, NONE, true),
+        HTMLToken::TableRow => (TR_OPEN, TR_CLOSE, false),
+        HTMLToken::TableCell | HTMLToken::TableHeaderCell => (TD_OPEN, TD_CLOSE, false),
+        HTMLToken::TableHead | HTMLToken::TableBody => (THEAD_OPEN, TABLE_CLOSE, false),
+        HTMLToken::TableFoot => (NONE, TABLE_CLOSE, false),
+        HTMLToken::TableCaption => (CAPTION_OPEN, TABLE_CLOSE, false),
+        HTMLToken::RubyText | HTMLToken::RubyParenthesis => (RT_OPEN, RUBY_CLOSE, false),
+        _ => return false,
+    };
     let buf_pos = eat_whitespace(input_u8, buf_pos);
-    *html_tag == HTMLToken::ListItem
-        && (is_opening_tag(input_u8, buf_pos, tag)
-            || is_closing_tag(input_u8, buf_pos, b"ul")
-            || is_closing_tag(input_u8, buf_pos, b"ol"))
+    if any_closer && is_any_closing_tag(input_u8, buf_pos) {
+        return true;
+    }
+    openers.iter().any(|t| is_opening_tag(input_u8, buf_pos, t))
+        || closers.iter().any(|t| is_closing_tag(input_u8, buf_pos, t))
+}
+
+/// True if `buf_pos` starts any closing tag, or is too close to EOF.
+fn is_any_closing_tag(input_u8: &[u8], buf_pos: usize) -> bool {
+    if buf_pos + 1 >= input_u8.len() {
+        return true;
+    }
+    input_u8[buf_pos] == b'<' && input_u8[buf_pos + 1] == b'/'
+}
+
+/// Subtrees that produce no visible page content.
+fn is_hidden_subtree(node: &ParseNode) -> bool {
+    match node.tag {
+        HTMLToken::Script
+        | HTMLToken::Style
+        | HTMLToken::RawText
+        | HTMLToken::Template
+        | HTMLToken::IFrame
+        | HTMLToken::Svg => true,
+        // <dialog> is hidden unless it has the `open` attribute
+        HTMLToken::Dialog => !node.attributes.contains_key("open"),
+        _ => false,
+    }
 }
 
 #[cfg(test)]
@@ -634,6 +793,57 @@ mod tests {
     fn self_closing_and_void_tags() {
         let html = "<html><body><p>a</p><img src=\"pic.png\"/><meta charset=\"utf-8\"><p>b</p></body></html>";
         assert_eq!(texts(html), vec!["a", "b"]);
+    }
+
+    #[test]
+    fn svg_content_is_skipped() {
+        let html = "<html><body><svg viewBox=\"0 0 10 10\"><path d=\"M0 0\">\
+                    <circle r=\"4\"/></svg><p>after</p></body></html>";
+        assert_eq!(texts(html), vec!["after"]);
+    }
+
+    #[test]
+    fn textarea_content_is_raw_text() {
+        let html = "<html><body><textarea>a <b>b</b></textarea></body></html>";
+        assert_eq!(texts(html), vec!["a <b>b</b>"]);
+    }
+
+    #[test]
+    fn hidden_elements_do_not_render() {
+        let html = "<html><body><iframe>fallback</iframe><template>tpl</template>\
+                    <dialog>closed</dialog><p>visible</p></body></html>";
+        assert_eq!(texts(html), vec!["visible"]);
+    }
+
+    #[test]
+    fn open_dialog_and_noscript_render() {
+        let html = "<html><body><dialog open>hi</dialog>\
+                    <noscript>enable js</noscript></body></html>";
+        assert_eq!(texts(html), vec!["hi", "enable js"]);
+    }
+
+    #[test]
+    fn definition_list_implied_close() {
+        let html = "<html><body><dl><dt>term<dd>def</dl></body></html>";
+        assert_eq!(texts(html), vec!["term", "def"]);
+    }
+
+    #[test]
+    fn table_with_unclosed_cells_and_rows() {
+        let html = "<html><body><table><tr><td>a<td>b<tr><td>c</table><p>end</p></body></html>";
+        assert_eq!(texts(html), vec!["a", "b", "c", "end"]);
+    }
+
+    #[test]
+    fn paragraph_implied_close() {
+        let html = "<html><body><div><p>one<p>two</div><p>three</body></html>";
+        assert_eq!(texts(html), vec!["one", "two", "three"]);
+    }
+
+    #[test]
+    fn select_options_render_with_implied_close() {
+        let html = "<html><body><select><option>x<option>y</select></body></html>";
+        assert_eq!(texts(html), vec!["x", "y"]);
     }
 
     #[test]
