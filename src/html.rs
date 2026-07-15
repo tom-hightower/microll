@@ -1,7 +1,7 @@
 use crate::structs::HTMLToken;
 use crate::structs::ParseNode;
 use crate::structs::RenderItem;
-use crate::structs::RenderState;
+use crate::style;
 use std::collections::HashMap;
 use std::str;
 
@@ -288,7 +288,12 @@ fn match_tag(tag: &[u8]) -> HTMLToken {
         "CODE" => HTMLToken::Code,
         "PRE" => HTMLToken::Preformatted,
         "DIV" => HTMLToken::DivSection,
-        "H1" | "H2" | "H3" | "H4" | "H5" | "H6" => HTMLToken::Heading,
+        "H1" => HTMLToken::Heading(1),
+        "H2" => HTMLToken::Heading(2),
+        "H3" => HTMLToken::Heading(3),
+        "H4" => HTMLToken::Heading(4),
+        "H5" => HTMLToken::Heading(5),
+        "H6" => HTMLToken::Heading(6),
         "I" | "EM" => HTMLToken::ItalicText,
         "LI" => HTMLToken::ListItem,
         "OL" => HTMLToken::OrderedList,
@@ -388,86 +393,12 @@ pub fn parse_html(html: &str) -> (Vec<RenderItem>, String) {
     root.end_ind = html.len();
     let (children, _) = larse(html.as_bytes(), 0, 0, &HTMLToken::Root);
     root.children = children;
-    let cur_state = RenderState::new();
-    build_array(root, Vec::new(), cur_state, String::new())
-}
-
-fn build_array(
-    node: ParseNode,
-    mut ret_vec: Vec<RenderItem>,
-    mut cur_state: RenderState,
-    title: String,
-) -> (Vec<RenderItem>, String) {
-    let mut cur_title = title;
-    for i in node.children {
-        if is_hidden_subtree(&i) {
-            continue;
-        }
-        match i.tag {
-            HTMLToken::BoldText => {
-                cur_state.bold = i.end_ind;
-            }
-            HTMLToken::HyperLink => {
-                cur_state.link = i.end_ind;
-                if let Some(link) = i.attributes.get("href") { cur_state.url = link.clone() }
-            }
-            HTMLToken::LineBreak => {
-                let mut break_item = RenderItem::new();
-                break_item.line_break = true;
-                ret_vec.push(break_item);
-            }
-            HTMLToken::Code => {
-                cur_state.code = i.end_ind;
-            }
-            HTMLToken::ItalicText => {
-                cur_state.italics = i.end_ind;
-            }
-            HTMLToken::PageTitle => {
-                cur_state.title = i.end_ind;
-            }
-            HTMLToken::Heading => {
-                cur_state.heading = i.end_ind;
-            }
-            HTMLToken::Text
-                if !(node.tag == HTMLToken::Unknown || node.tag == HTMLToken::Script)
-                    && !is_text_whitespace(&i.text)
-                => {
-                    let mut item = RenderItem::new();
-                    item.text = decode_entities(&String::from_utf8_lossy(&i.text));
-                    if i.end_ind < cur_state.bold {
-                        item.bold = true;
-                    }
-                    if i.end_ind < cur_state.link {
-                        item.link = true;
-                        item.url = cur_state.url.clone();
-                    }
-                    if i.end_ind < cur_state.code {
-                        item.code = true;
-                    }
-                    if i.end_ind < cur_state.italics {
-                        item.italics = true;
-                    }
-                    if i.end_ind < cur_state.title {
-                        item.title = true;
-                        cur_title = item.text.clone();
-                    }
-                    if i.end_ind < cur_state.heading {
-                        item.heading = true;
-                    }
-                    ret_vec.push(item);
-                }
-            _ => {}
-        }
-        let ret = build_array(i, ret_vec, cur_state.clone(), cur_title.clone());
-        ret_vec = ret.0;
-        cur_title = ret.1;
-    }
-    (ret_vec, cur_title)
+    style::style_tree(root)
 }
 
 /// Decodes common named HTML entities and numeric character references
 /// Unrecognized or malformed sequences are passed through unchanged
-fn decode_entities(text: &str) -> String {
+pub(crate) fn decode_entities(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
     while let Some(amp) = rest.find('&') {
@@ -520,7 +451,7 @@ fn eat_whitespace(input_u8: &[u8], mut buf_pos: usize) -> usize {
     buf_pos
 }
 
-fn is_text_whitespace(text: &[u8]) -> bool {
+pub(crate) fn is_text_whitespace(text: &[u8]) -> bool {
     text.iter().all(|&c| is_whitespace(c))
 }
 
@@ -657,7 +588,7 @@ fn is_any_closing_tag(input_u8: &[u8], buf_pos: usize) -> bool {
 }
 
 /// Subtrees that produce no visible page content.
-fn is_hidden_subtree(node: &ParseNode) -> bool {
+pub(crate) fn is_hidden_subtree(node: &ParseNode) -> bool {
     match node.tag {
         HTMLToken::Script
         | HTMLToken::Style
@@ -679,7 +610,7 @@ mod tests {
         parse_html(html)
             .0
             .into_iter()
-            .filter(|item| !item.line_break)
+            .filter(|item| !item.line_break && item.block.is_none())
             .map(|item| item.text)
             .collect()
     }
@@ -695,10 +626,10 @@ mod tests {
         let (items, title) = parse_html(html);
         assert_eq!(title, "My Page");
         let heading = &items[find_item(&items, "Hello").expect("heading item")];
-        assert!(heading.heading);
+        assert!(heading.heading_level.is_some());
         assert!(!heading.bold);
         let body_text = &items[find_item(&items, "World").expect("paragraph item")];
-        assert!(!body_text.heading);
+        assert!(body_text.heading_level.is_none());
     }
 
     #[test]
@@ -888,7 +819,7 @@ mod tests {
         assert_eq!(title, "Microll: The Text-Based Web Browser");
 
         let (items, _) = parse_html(include_str!("test.html"));
-        assert!(items.iter().any(|i| i.text == "Test Heading" && i.heading));
+        assert!(items.iter().any(|i| i.text == "Test Heading" && i.heading_level.is_some()));
         assert!(items.iter().any(|i| i.text == "paragraph" && i.link));
     }
 }

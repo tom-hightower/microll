@@ -94,7 +94,7 @@ impl WebpageFinder {
  * HTML Parsing Structs and Enums
 */
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub enum HTMLToken {
     Root,
     DocType,       // !Doctype
@@ -106,7 +106,6 @@ pub enum HTMLToken {
     Preformatted,  //pre
     DivSection,    //div
     Head,          //head
-    Heading,       //heading
     HtmlStart,     //html
     ItalicText,    //i or em
     ListItem,      //li
@@ -121,6 +120,7 @@ pub enum HTMLToken {
     Void,          // no closing tag
     Text,          // Text-only
     Unknown,
+    Heading(u8),   //h1-h6, level 1-6
 
     // Tables
     Table,             //table
@@ -239,7 +239,7 @@ impl ParseNode {
 
 pub struct RenderItem {
     pub bold: bool,
-    pub heading: bool,
+    pub heading_level: Option<u8>,
     pub italics: bool,
     pub link: bool,
     pub url: String,
@@ -247,13 +247,14 @@ pub struct RenderItem {
     pub title: bool,
     pub code: bool,
     pub text: String,
+    pub block: Option<BlockBoundary>,
 }
 
 impl RenderItem {
     pub fn new() -> RenderItem {
         RenderItem {
             bold: false,
-            heading: false,
+            heading_level: None,
             italics: false,
             link: false,
             url: String::new(),
@@ -261,31 +262,72 @@ impl RenderItem {
             title: false,
             code: false,
             text: String::new(),
+            block: None,
         }
+    }
+
+    pub fn line_break() -> RenderItem {
+        let mut item = RenderItem::new();
+        item.line_break = true;
+        item
+    }
+
+    pub fn block(boundary: BlockBoundary) -> RenderItem {
+        let mut item = RenderItem::new();
+        item.block = Some(boundary);
+        item
     }
 }
 
-#[derive(Clone)]
-pub struct RenderState {
-    pub bold: usize,
-    pub heading: usize,
-    pub italics: usize,
-    pub link: usize,
-    pub url: String,
-    pub title: usize,
-    pub code: usize,
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ElementStyle {
+    pub display: Display,
+    pub spacing_before: f32,
+    pub indents: bool,
 }
 
-impl RenderState {
-    pub fn new() -> RenderState {
-        RenderState {
-            bold: 0,
-            heading: 0,
-            italics: 0,
-            link: 0,
-            url: String::new(),
-            title: 0,
-            code: 0,
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Display {
+    Inline,
+    Block,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct BlockBoundary {
+    pub spacing_before: f32,
+    pub indent: u8,
+    pub marker: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum MarkerKind {
+    Bullet,
+    Ordinal,
+}
+
+#[derive(Clone)]
+pub struct RenderContext {
+    pub bold: bool,
+    pub italics: bool,
+    pub code: bool,
+    pub link: Option<String>,
+    pub heading_level: Option<u8>,
+    pub in_title: bool,
+    pub indent: u8,
+    pub list_kind: Option<MarkerKind>,
+}
+
+impl RenderContext {
+    pub fn new() -> RenderContext {
+        RenderContext {
+            bold: false,
+            italics: false,
+            code: false,
+            link: None,
+            heading_level: None,
+            in_title: false,
+            indent: 0,
+            list_kind: None,
         }
     }
 }

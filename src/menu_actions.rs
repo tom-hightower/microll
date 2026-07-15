@@ -108,8 +108,8 @@ impl MenuAction {
             MenuAction::ToggleHtml => {
                 state.sub_windows.show_raw_html = !state.sub_windows.show_raw_html;
             }
-            MenuAction::DocumentInfo => state.sub_windows.document_info = true,
-            MenuAction::Help => state.sub_windows.help = true,
+            MenuAction::DocumentInfo => state.sub_windows.document_info = !state.sub_windows.document_info,
+            MenuAction::Help => state.sub_windows.help = !state.sub_windows.help,
         }
     }
 }

@@ -4,6 +4,7 @@ mod main_menu_bar;
 mod menu_actions;
 mod navigation;
 mod structs;
+mod style;
 
 use eframe::egui;
 use structs::State;
@@ -136,19 +137,68 @@ fn show_main_content(ui: &mut egui::Ui, state: &mut State) {
     }
 }
 
-enum Inline {
-    Text(usize, String),
-    Code(usize, String),
-    Link { index: usize, text: String, url: String },
+const INDENT_PX: f32 = 24.0;
+
+#[derive(Clone, Copy, Default)]
+struct RunStyle {
+    bold: bool,
+    italics: bool,
+    heading_level: Option<u8>,
 }
 
-fn highlighted_text(text: String, index: usize, highlight: Option<usize>) -> egui::RichText {
-    let rich = egui::RichText::new(text);
-    if Some(index) == highlight {
-        rich.background_color(egui::Color32::YELLOW)
-    } else {
-        rich
+enum Inline {
+    Text(usize, String, RunStyle),
+    Code(usize, String),
+    Link {
+        index: usize,
+        text: String,
+        url: String,
+        style: RunStyle,
+    },
+}
+
+fn px_for_level(level: u8) -> f32 {
+    match level {
+        1 => 28.0,
+        2 => 24.0,
+        3 => 20.0,
+        4 => 18.0,
+        5 => 16.0,
+        _ => 15.0,
     }
+}
+
+fn with_indent<R>(ui: &mut egui::Ui, indent: u8, f: impl FnOnce(&mut egui::Ui) -> R) -> R {
+    if indent == 0 {
+        return f(ui);
+    }
+    ui.horizontal(|ui| {
+        ui.add_space(indent as f32 * INDENT_PX);
+        ui.vertical(|ui| f(ui)).inner
+    })
+    .inner
+}
+
+fn highlighted_text(
+    text: String,
+    index: usize,
+    highlight: Option<usize>,
+    style: RunStyle,
+) -> egui::RichText {
+    let mut rich = egui::RichText::new(text);
+    if style.bold {
+        rich = rich.strong();
+    }
+    if style.italics {
+        rich = rich.italics();
+    }
+    if let Some(level) = style.heading_level {
+        rich = rich.size(px_for_level(level));
+    }
+    if Some(index) == highlight {
+        rich = rich.background_color(egui::Color32::YELLOW);
+    }
+    rich
 }
 
 fn flush_inline(
@@ -156,36 +206,45 @@ fn flush_inline(
     run: &mut Vec<Inline>,
     clicked_url: &mut Option<String>,
     highlight: Option<usize>,
+    indent: u8,
 ) {
     if run.is_empty() {
         return;
     }
-    ui.horizontal_wrapped(|ui| {
-        for item in run.drain(..) {
-            match item {
-                Inline::Text(index, text) => {
-                    let response = ui.label(highlighted_text(text, index, highlight));
-                    if Some(index) == highlight {
-                        response.scroll_to_me(Some(egui::Align::Center));
+    with_indent(ui, indent, |ui| {
+        ui.horizontal_wrapped(|ui| {
+            for item in run.drain(..) {
+                match item {
+                    Inline::Text(index, text, style) => {
+                        let response = ui.label(highlighted_text(text, index, highlight, style));
+                        if Some(index) == highlight {
+                            response.scroll_to_me(Some(egui::Align::Center));
+                        }
                     }
-                }
-                Inline::Code(index, text) => {
-                    let response = ui.code(highlighted_text(text, index, highlight));
-                    if Some(index) == highlight {
-                        response.scroll_to_me(Some(egui::Align::Center));
+                    Inline::Code(index, text) => {
+                        let response =
+                            ui.code(highlighted_text(text, index, highlight, RunStyle::default()));
+                        if Some(index) == highlight {
+                            response.scroll_to_me(Some(egui::Align::Center));
+                        }
                     }
-                }
-                Inline::Link { index, text, url } => {
-                    let response = ui.link(highlighted_text(text, index, highlight));
-                    if response.clicked() {
-                        *clicked_url = Some(url);
-                    }
-                    if Some(index) == highlight {
-                        response.scroll_to_me(Some(egui::Align::Center));
+                    Inline::Link {
+                        index,
+                        text,
+                        url,
+                        style,
+                    } => {
+                        let response = ui.link(highlighted_text(text, index, highlight, style));
+                        if response.clicked() {
+                            *clicked_url = Some(url);
+                        }
+                        if Some(index) == highlight {
+                            response.scroll_to_me(Some(egui::Align::Center));
+                        }
                     }
                 }
             }
-        }
+        });
     });
 }
 
@@ -198,14 +257,22 @@ fn build_webpage(ui: &mut egui::Ui, state: &mut State) {
     let mut run: Vec<Inline> = Vec::new();
     let mut clicked_url: Option<String> = None;
     let mut new_title: Option<String> = None;
+    let mut current_indent: u8 = 0;
     let len = state.main_body_array.len();
     let mut i: usize = 0;
     while i < len {
         let item = &state.main_body_array[i];
-        if item.title {
+        if let Some(meta) = item.block.clone() {
+            flush_inline(ui, &mut run, &mut clicked_url, highlight, current_indent);
+            ui.add_space(meta.spacing_before * ui.text_style_height(&egui::TextStyle::Body));
+            current_indent = meta.indent;
+            if let Some(marker) = meta.marker {
+                run.push(Inline::Text(usize::MAX, marker, RunStyle::default()));
+            }
+        } else if item.title {
             new_title = Some(item.text.clone());
         } else if item.line_break {
-            flush_inline(ui, &mut run, &mut clicked_url, highlight);
+            flush_inline(ui, &mut run, &mut clicked_url, highlight, current_indent);
             ui.add_space(ui.text_style_height(&egui::TextStyle::Body));
         } else if item.code {
             let prev_code = i > 0 && state.main_body_array[i - 1].code;
@@ -220,7 +287,7 @@ fn build_webpage(ui: &mut egui::Ui, state: &mut State) {
                     i += 1;
                     code_text.push_str(&state.main_body_array[i].text);
                 }
-                flush_inline(ui, &mut run, &mut clicked_url, highlight);
+                flush_inline(ui, &mut run, &mut clicked_url, highlight, current_indent);
                 let block_highlighted = highlight.is_some_and(|h| (start_i..=i).contains(&h));
                 let rich = egui::RichText::new(code_text);
                 let rich = if block_highlighted {
@@ -228,7 +295,7 @@ fn build_webpage(ui: &mut egui::Ui, state: &mut State) {
                 } else {
                     rich
                 };
-                let response = ui.monospace(rich);
+                let response = with_indent(ui, current_indent, |ui| ui.monospace(rich));
                 if block_highlighted {
                     response.scroll_to_me(Some(egui::Align::Center));
                 }
@@ -238,13 +305,26 @@ fn build_webpage(ui: &mut egui::Ui, state: &mut State) {
                 index: i,
                 text: item.text.clone(),
                 url: item.url.clone(),
+                style: RunStyle {
+                    bold: item.bold,
+                    italics: item.italics,
+                    heading_level: item.heading_level,
+                },
             });
         } else {
-            run.push(Inline::Text(i, item.text.clone()));
+            run.push(Inline::Text(
+                i,
+                item.text.clone(),
+                RunStyle {
+                    bold: item.bold,
+                    italics: item.italics,
+                    heading_level: item.heading_level,
+                },
+            ));
         }
         i += 1;
     }
-    flush_inline(ui, &mut run, &mut clicked_url, highlight);
+    flush_inline(ui, &mut run, &mut clicked_url, highlight, current_indent);
 
     if let Some(title) = new_title {
         state.window_title = title;
